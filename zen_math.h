@@ -1,15 +1,15 @@
-/* zen.h - v0.42 - public domain utility -https://github.com/ZenToad/zen
+/* zen_math.h - v0.02 - public domain utility -https://github.com/ZenToad/zen
                                      no warranty implied; use at your own risk
 
    Do this:
-      #define ZEN_H_IMPLEMENTATION
+      #define ZEN_MATH_IMPLEMENTATION
    before you include this file in *one* C or C++ file to create the implementation.
    // i.e. it should look like this:
    #include ...
    #include ...
    #include ...
-   #define ZEN_H_IMPLEMENTATION
-   #include "zen.h"
+   #define ZEN_MATH_IMPLEMENTATION
+   #include "zen_math.h"
 
 	Full license at bottom of file.	
 
@@ -18,90 +18,29 @@
 #ifndef ZEN_H_INCLUDE
 #define ZEN_H_INCLUDE
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <stdint.h>
-#include <stddef.h>
 
-typedef int8_t  	i8;
-typedef int16_t 	i16;
-typedef int32_t 	i32;
-typedef int64_t 	i64;
-
-typedef uint8_t  	u8;
-typedef uint16_t 	u16;
-typedef uint32_t 	u32;
-typedef uint64_t 	u64;
-
-typedef i8  b8;
-typedef i16 b16;
-typedef i32 b32; // NOTE(tim): Prefer this!!!
-
-typedef float 		f32;
-typedef double 	f64;
-
-typedef size_t    usize;
-typedef ptrdiff_t isize;
-
-
-// NOTE(tim): Easier to search for
-#define cast(Type) (Type)
-
-
-// NOTE(tim): Because a signed sizeof is more useful
-#define zen_sizeof(x) cast(isize)(sizeof(x))
-
-#include <stdio.h>
-#define zdebug(M, ...) fprintf(stdout, "DEBUG %s:%d: " M "\n",\
-        __FILE__, __LINE__, ##__VA_ARGS__)
-
-
-#define zout(M, ...) fprintf(stdout, M "\n", ##__VA_ARGS__)
-
-
-#ifdef ZEN_H_STATIC
-#define ZENHDEF static
+#ifdef ZEN_MATH_STATIC
+#define ZMATH static
 #else 
-#define ZENHDEF extern
+#define ZMATH extern
 #endif
 
-ZENHDEF float zen_elapsed_time();
 
 #ifdef __cplusplus
 }
 #endif
 
 
-#endif // ZEN_H_INCLUDE
+#endif // ZEN_MATH_INCLUDE
 
 #ifdef ZEN_H_IMPLEMENTATION
 
-ZENHDEF float zen_elapsed_time() {
-		static int first = 1;
-		static LARGE_INTEGER prev;
-		static double factor;
-
-		LARGE_INTEGER now;
-		QueryPerformanceCounter( &now );
-
-		if ( first )
-		{
-			first = 0;
-			prev = now;
-			LARGE_INTEGER freq;
-			QueryPerformanceFrequency( &freq );
-			factor = 1.0 / (double)freq.QuadPart;
-			return 0;
-		}
-
-		float elapsed = (float)((double)(now.QuadPart - prev.QuadPart) * factor);
-		prev = now;
-		return elapsed;
-}
-
-#endif // ZEN_IMPLEMENTATION
+#endif // ZEN_MATH_IMPLEMENTATION
 
 
 // Public Domain (www.unlicense.org)
