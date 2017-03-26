@@ -56,7 +56,7 @@ typedef ptrdiff_t isize;
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+#include <stdio.h>
 #define zdebug(M, ...) fprintf(stdout, "DEBUG %s:%d: " M "\n",\
         __FILE__, __LINE__, ##__VA_ARGS__)
 
