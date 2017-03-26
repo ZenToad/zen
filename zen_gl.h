@@ -20,9 +20,6 @@
 #ifndef ZEN_GL_INCLUDE
 #define ZEN_GL_INCLUDE
 
-#include "zen.h"
-#include "stb_truetype.h"
-
 #ifndef ZGL_BS_MAX_VERTEX_COUNT
 #define ZGL_BS_MAX_VERTEX_COUNT 32
 #endif
@@ -34,6 +31,14 @@
 #ifndef ZGL_MAX_UNIFORM_COUNT
 #define ZGL_MAX_UNIFORM_COUNT 32
 #endif
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include "zen.h"
+#include "stb_truetype.h"
 
 
 typedef enum ZGLShaderType {
@@ -124,11 +129,6 @@ typedef struct ZGLBasicState {
 } ZGLBasicState;
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-
 #ifdef ZEN_GL_STATIC
 #define ZGLDEF static
 #else 
@@ -161,9 +161,19 @@ ZGLDEF void zgl_draw_string(ZGLBasicState *bs, const char* text, f32 *x, f32 *y,
 
 #ifdef ZEN_GL_IMPLEMENTATION
 
+#ifndef STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
+#endif
+#include "stb_image.h"
 
-#define STB_TRUETYPE_IMPLEMENTATION
+#ifndef STB_TRUETYPE_IMPLEMENTATION
+#define STB_TRUETYPE_IMPLEMENTATION  
+#endif
 #include "stb_truetype.h"
+
+#include <assert.h>
+#include "zen.h"
+
 
 #define zgl_vert_ptr_aa(index, element_count, Type, var_name) \
     zgl_vert_ptr_aa_f32(index, element_count, Type, var_name)
@@ -393,7 +403,6 @@ static void zgl_bind_texture2d(ZGLTexture const *t, u32 position, u32 sampler) {
 	}
 
 	glActiveTexture(GL_TEXTURE0 + position);
-	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, t ? t->handle : 0);
 	glBindSampler(position, sampler);
 }
@@ -411,6 +420,10 @@ b32 zgl_load_texture2d_from_memory(ZGLTexture *tex, void const *data, i32 width,
 	glGenTextures(1, &tex->handle);
 	glBindTexture(GL_TEXTURE_2D, tex->handle);
 
+	assert(GL_MAX_TEXTURE_SIZE > width);
+	assert(GL_MAX_TEXTURE_SIZE > height);
+
+	zout("w: %d, h:%d, max: %d", width, height, GL_MAX_TEXTURE_SIZE);
 
 	glTexImage2D(GL_TEXTURE_2D, 0,
 	             zglInternalTextureFormat_8[channel_count-1],
@@ -433,7 +446,7 @@ b32 zgl_load_texture2d_from_file(ZGLTexture *texture, b32 flip_vertically, char 
 	int width, height, comp;
 
 	stbi_set_flip_vertically_on_load(flip_vertically);
-	data = stbi_load(filename, &width, &height, &comp, 0);
+	data = stbi_load(filename, &width, &height, &comp, 4);
 	if (data == NULL) {
 		fprintf(stderr, "Failed to load image: %s\n", filename);
 		result = false;
@@ -700,7 +713,7 @@ ZGLDEF void zgl_bs_initialize(ZGLBasicState *bs, int window_width, int window_he
 		bs->indices[i*6 + 4] = i*4 + 3;
 		bs->indices[i*6 + 5] = i*4 + 0;
 	}
-	bs->ebo = zgl_make_ebo(bs->indices, zen_sizeof(u16) * ZGL_BS_MAX_INDEX_COUNT, GL_STATIC_DRAW);
+	bs->ebo = zgl_make_ebo(bs->indices, zen_sizeof(u16) * ZGL_BS_MAX_INDEX_COUNT, GL_DYNAMIC_DRAW);
 
 	bs->nearest_sampler = zgl_make_sampler(GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 	bs->linear_sampler  = zgl_make_sampler(GL_LINEAR,  GL_LINEAR,  GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);

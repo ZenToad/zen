@@ -53,10 +53,15 @@ typedef ptrdiff_t isize;
 #define zen_sizeof(x) cast(isize)(sizeof(x))
 #endif
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define zdebug(M, ...) fprintf(stdout, "DEBUG %s:%d: " M "\n",\
+        __FILE__, __LINE__, ##__VA_ARGS__)
+
+
+#define zout(M, ...) fprintf(stdout, M "\n", ##__VA_ARGS__)
 
 
 #ifdef ZEN_H_STATIC
