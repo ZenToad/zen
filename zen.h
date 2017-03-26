@@ -18,6 +18,10 @@
 #ifndef ZEN_H_INCLUDE
 #define ZEN_H_INCLUDE
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 #include <stddef.h>
 
@@ -43,19 +47,12 @@ typedef ptrdiff_t isize;
 
 
 // NOTE(tim): Easier to search for
-#ifndef cast
 #define cast(Type) (Type)
-#endif
 
 
 // NOTE(tim): Because a signed sizeof is more useful
-#ifndef zen_sizeof
 #define zen_sizeof(x) cast(isize)(sizeof(x))
-#endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 #include <stdio.h>
 #define zdebug(M, ...) fprintf(stdout, "DEBUG %s:%d: " M "\n",\
         __FILE__, __LINE__, ##__VA_ARGS__)
@@ -70,6 +67,7 @@ extern "C" {
 #define ZENHDEF extern
 #endif
 
+ZENHDEF float zen_elapsed_time();
 
 #ifdef __cplusplus
 }
@@ -79,6 +77,30 @@ extern "C" {
 #endif // ZEN_H_INCLUDE
 
 #ifdef ZEN_H_IMPLEMENTATION
+
+ZENHDEF float zen_elapsed_time() {
+	return 42.0f;
+		//static int first = 1;
+		//static LARGE_INTEGER prev;
+		//static double factor;
+
+		//LARGE_INTEGER now;
+		//QueryPerformanceCounter( &now );
+
+		//if ( first )
+		//{
+			//first = 0;
+			//prev = now;
+			//LARGE_INTEGER freq;
+			//QueryPerformanceFrequency( &freq );
+			//factor = 1.0 / (double)freq.QuadPart;
+			//return 0;
+		//}
+
+		//float elapsed = (float)((double)(now.QuadPart - prev.QuadPart) * factor);
+		//prev = now;
+		//return elapsed;
+}
 
 #endif // ZEN_IMPLEMENTATION
 
@@ -100,20 +122,4 @@ extern "C" {
 // AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
 // ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-// Public Domain (www.unlicense.org)
-// This is free and unencumbered software released into the public domain.
-// Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
-// software, either in source code form or as a compiled binary, for any purpose, 
-// commercial or non-commercial, and by any means.
-// In jurisdictions that recognize copyright laws, the author or authors of this 
-// software dedicate any and all copyright interest in the software to the public 
-// domain. We make this dedication for the benefit of the public at large and to 
-// the detriment of our heirs and successors. We intend this dedication to be an 
-// overt act of relinquishment in perpetuity of all present and future rights to 
-// this software under copyright law.
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-// AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
-// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
-// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+//

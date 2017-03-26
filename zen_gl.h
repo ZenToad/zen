@@ -37,7 +37,6 @@
 extern "C" {
 #endif
 
-#include "zen.h"
 #include "stb_truetype.h"
 
 
@@ -172,7 +171,6 @@ ZGLDEF void zgl_draw_string(ZGLBasicState *bs, const char* text, f32 *x, f32 *y,
 #include "stb_truetype.h"
 
 #include <assert.h>
-#include "zen.h"
 
 
 #define zgl_vert_ptr_aa(index, element_count, Type, var_name) \
