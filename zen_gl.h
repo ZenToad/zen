@@ -122,6 +122,7 @@ typedef struct ZGLBasicState {
 
 	u32 nearest_sampler;
 	u32 linear_sampler;
+	u32 mipmap_sampler;
 
 	ZGLFont font;
 
@@ -387,9 +388,6 @@ static void zgl__bs_setup_ortho_colour_state(ZGLBasicState *bs, isize vertex_cou
 	zgl_vert_ptr_aa(0, 2, ZGLBasicVertex, x);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bs->ebo);
 
-	glEnable(GL_BLEND);
-	glBlendEquation(GL_FUNC_ADD);
-	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 static void zgl_bind_texture2d(ZGLTexture const *t, u32 position, u32 sampler) {
@@ -429,8 +427,8 @@ b32 zgl_load_texture2d_from_memory(ZGLTexture *tex, void const *data, i32 width,
 	             gbglTextureFormat[channel_count-1],
 	             GL_UNSIGNED_BYTE, data);
 
+   glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
-	glGenerateMipmap(GL_TEXTURE_2D);
 	glFinish();
 
 
@@ -506,7 +504,7 @@ ZGLDEF void zgl_bs_draw_textured_rect(ZGLBasicState *bs, ZGLTexture *tex, f32 x,
 
 	zgl_use_shader(&bs->ortho_tex_shader);
 	zgl_set_uniform_mat4(&bs->ortho_tex_shader, "u_ortho_mat", bs->ortho_mat);
-	zgl_bind_texture2d(tex, 0, bs->linear_sampler);
+	zgl_bind_texture2d(tex, 0, bs->mipmap_sampler);
 
 	zgl_vbo_copy(bs->vbo, bs->vertices, 4*zen_sizeof(bs->vertices[0]), 0);
 
@@ -515,8 +513,6 @@ ZGLDEF void zgl_bs_draw_textured_rect(ZGLBasicState *bs, ZGLTexture *tex, f32 x,
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bs->ebo);
 
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
 }
 
@@ -547,7 +543,7 @@ ZGLDEF void zgl_bs_draw_textured_subrect(
 
 	zgl_use_shader(&bs->ortho_tex_shader);
 	zgl_set_uniform_mat4(&bs->ortho_tex_shader, "u_ortho_mat", bs->ortho_mat);
-	zgl_bind_texture2d(tex, 0, bs->linear_sampler);
+	zgl_bind_texture2d(tex, 0, bs->mipmap_sampler);
 
 	zgl_vbo_copy(bs->vbo, bs->vertices, 4*zen_sizeof(bs->vertices[0]), 0);
 
@@ -556,8 +552,6 @@ ZGLDEF void zgl_bs_draw_textured_subrect(
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bs->ebo);
 
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
 }
 
@@ -594,8 +588,6 @@ static void zgl_bs_draw_font(ZGLBasicState *bs, stbtt_aligned_quad *q, b32 up){
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bs->ebo);
 
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
 }
 
@@ -716,6 +708,7 @@ ZGLDEF void zgl_bs_initialize(ZGLBasicState *bs, int window_width, int window_he
 
 	bs->nearest_sampler = zgl_make_sampler(GL_NEAREST, GL_NEAREST, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 	bs->linear_sampler  = zgl_make_sampler(GL_LINEAR,  GL_LINEAR,  GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+	bs->mipmap_sampler  = zgl_make_sampler(GL_LINEAR_MIPMAP_LINEAR,  GL_LINEAR,  GL_REPEAT, GL_REPEAT);
 
 	//TODO(tim): Need support for filled objects, line objects
 	//TODO(tim): Need support for textured quads
