@@ -18,19 +18,36 @@ typedef struct ZGLFW {
    int major_version;
    int minor_version;
    int window_width;
+	float window_widthf;
    int window_height;
+	float window_heightf;
    int window_cursor_mode;
    int window_background;
    int should_close;
+
+	double current_time;
+	double last_time;
+	double delta_time;
+
+	float mouse_x;
+	float mouse_y;
+	float mouse_dx;
+	float mouse_dy;
+	float last_mouse_x;
+	float last_mouse_y;
 
    GLFWwindow* window;
    void (*error_callback)(int, const char*);
    void (*key_callback)(GLFWwindow*, int, int, int, int);
    void (*window_size_callback)(GLFWwindow*, int, int);
 
+	int keys[GLFW_KEY_LAST];
+	
+
 } ZGLFW;
 
 ZGLFWDEF void zglfw_init(ZGLFW *glfw);
+ZGLFWDEF void zglfw_show_window(ZGLFW &glfw);
 ZGLFWDEF int zglfw_is_running(ZGLFW *glfw);
 ZGLFWDEF void zglfw_begin(ZGLFW *glfw);
 ZGLFWDEF void zglfw_end(ZGLFW *glfw);
@@ -53,20 +70,6 @@ static void zglfw_default_error_callback(int error, const char *description) {
    fprintf(stderr, "Error: %s\n", description);
 }
 
-static void zglfw_default_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-
-	printf("key: %d, scancode: %d, action: %d, mods: %d\n", key, scancode, action, mods);
-
-	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-		glfwSetWindowShouldClose(window, GLFW_TRUE);
-	}
-
-}
-
-static void zglfw_default_window_size_callback(GLFWwindow* window, int width, int height) {
-	glViewport(0, 0, width, height);
-}
-
 ZGLFWDEF void zglfw_init(ZGLFW *glfw) {
 
    if (!glfw->error_callback) {
@@ -81,6 +84,7 @@ ZGLFWDEF void zglfw_init(ZGLFW *glfw) {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, glfw->major_version);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, glfw->minor_version);
    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+	glfwWindowHint(GLFW_SAMPLES, 4);
 
 	glfw->window = glfwCreateWindow(glfw->window_width, glfw->window_height, glfw->window_title, NULL, NULL);
 	if (!glfw->window) {
@@ -88,19 +92,13 @@ ZGLFWDEF void zglfw_init(ZGLFW *glfw) {
 		exit(EXIT_FAILURE);
 	}
 
-   if (!glfw->key_callback) {
-      glfw->key_callback = zglfw_default_key_callback;
+   if (glfw->key_callback) {
+		glfwSetKeyCallback(glfw->window, glfw->key_callback);
    }
-   glfwSetKeyCallback(glfw->window, glfw->key_callback);
 
-   if (!glfw->window_size_callback) {
-      glfwSetWindowSizeCallback(glfw->window, glfw->window_size_callback);
+   if (glfw->window_size_callback) {
+		glfwSetWindowSizeCallback(glfw->window, glfw->window_size_callback);
    }
-   glfwSetWindowSizeCallback(glfw->window, glfw->window_size_callback);
-
-	//glfwSetCharCallback(window, character_callback);
-	//glfwSetCursorPosCallback(window, cursor_position_callback);
-	//glfwSetCursorEnterCallback(window, cursor_enter_callback);
 
 	glfwSetInputMode(glfw->window, GLFW_CURSOR, glfw->window_cursor_mode);
 
@@ -108,12 +106,21 @@ ZGLFWDEF void zglfw_init(ZGLFW *glfw) {
 	gladLoadGLLoader((GLADloadproc) glfwGetProcAddress);
 	glfwSwapInterval(1);
 
-   glfwShowWindow(glfw->window);
+   //glfwShowWindow(glfw->window);
 
 	printf("OpenGL Loaded\n");
 	printf("Vendor:   %s\n", glGetString(GL_VENDOR));
 	printf("Renderer: %s\n", glGetString(GL_RENDERER));
 	printf("Version:  %s\n", glGetString(GL_VERSION));
+
+	glfw->current_time = glfwGetTime();
+	glfw->last_time = glfw->current_time;
+	glfw->delta_time = 0.0;
+
+}
+
+ZGLFWDEF void zglfw_show_window(ZGLFW *glfw) {
+	glfwShowWindow(glfw->window);
 }
 
 ZGLFWDEF int zglfw_is_running(ZGLFW *glfw) {
@@ -122,6 +129,28 @@ ZGLFWDEF int zglfw_is_running(ZGLFW *glfw) {
 }
 
 ZGLFWDEF void zglfw_begin(ZGLFW *glfw) {
+
+	glfw->last_time = glfw->current_time;
+	glfw->current_time = glfwGetTime();
+	glfw->delta_time = glfw->current_time - glfw->last_time;
+
+	for (int i = 32; i < GLFW_KEY_LAST; ++i) {
+		if (glfwGetKey(glfw->window, i) == GLFW_PRESS) {
+			glfw->keys[i] += 1;
+		} else {
+			glfw->keys[i] = 0;
+		}
+	}
+
+	double x, y;
+	glfwGetCursorPos(glfw->window, &x, &y);
+
+	glfw->last_mouse_x = glfw->mouse_x;
+	glfw->last_mouse_y = glfw->mouse_y;
+	glfw->mouse_x = cast(float)x;
+	glfw->mouse_y = cast(float)y;
+	glfw->mouse_dx = glfw->mouse_x - glfw->last_mouse_x; 
+	glfw->mouse_dy = glfw->mouse_y - glfw->last_mouse_y; 
 
    glClear(GL_COLOR_BUFFER_BIT);
 
@@ -132,6 +161,8 @@ ZGLFWDEF void zglfw_begin(ZGLFW *glfw) {
    glClearColor(r / 255.99f, g / 255.99f, b / 255.99f, a / 255.99f);
 
    glfwGetFramebufferSize(glfw->window, &glfw->window_width, &glfw->window_height);
+	glfw->window_widthf = glfw->window_width;
+	glfw->window_heightf = glfw->window_height;
 
 }
 

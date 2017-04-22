@@ -21,7 +21,7 @@
 #define ZEN_GL_INCLUDE
 
 #ifndef ZGL_BS_MAX_VERTEX_COUNT
-#define ZGL_BS_MAX_VERTEX_COUNT 32
+#define ZGL_BS_MAX_VERTEX_COUNT 64
 #endif
 
 #ifndef ZGL_BS_MAX_INDEX_COUNT
@@ -30,6 +30,16 @@
 
 #ifndef ZGL_MAX_UNIFORM_COUNT
 #define ZGL_MAX_UNIFORM_COUNT 32
+#endif
+
+#ifndef f32
+#include <stdint.h>
+typedef float f32;
+typedef uint32_t u32;
+typedef int32_t i32;
+typedef uint8_t u8;
+typedef uint16_t u16;
+typedef int32_t b32;
 #endif
 
 
@@ -52,7 +62,7 @@ typedef enum ZGLShaderError {
 	ZGL_ERROR_NONE,
 	ZGL_VERTEX_COMPILE_ERROR,
 	ZGL_FRAGMENT_COMPILE_ERROR,
-	ZGL_LINKER_ERROR,
+ 	ZGL_LINKER_ERROR,
 
 	ZGL_SHADER_ERROR_COUNT,
 } ZGLShaderError;
@@ -139,13 +149,19 @@ typedef struct ZGLBasicState {
 ZGLDEF void zgl_bs_initialize(ZGLBasicState *bs, int window_width, int window_height);
 ZGLDEF void zgl_bs_begin(ZGLBasicState *bs, i32 window_width, i32 window_height);
 ZGLDEF void zgl_bs_end(ZGLBasicState *bs);
-ZGLDEF void zgl_bs_draw_rect(ZGLBasicState *bs, f32 x, f32 y, f32 w, f32 h, ZGLColor col);
-ZGLDEF void zgl_bs_draw_quad( ZGLBasicState *bs, f32 x0, f32 y0, f32 x1, f32 y1, f32 x2, f32 y2, f32 x3, f32 y3, ZGLColor col);
+ZGLDEF void zgl_bs_draw_rect(ZGLBasicState *bs, f32 mv[16], f32 x, f32 y, f32 w, f32 h, ZGLColor col);
+ZGLDEF void zgl_bs_draw_quad(ZGLBasicState *bs, f32 mv[16], f32 x0, f32 y0, f32 x1, f32 y1, f32 x2, f32 y2, f32 x3, f32 y3, ZGLColor col);
+ZGLDEF void zgl_bs_draw_circle(ZGLBasicState *bs, f32 mv[16], f32 cx, f32 cy, f32 r, ZGLColor color);
+ZGLDEF void zgl_bs_draw_point(ZGLBasicState *bs, f32 mv[16], f32 x, f32 y, ZGLColor color);
+ZGLDEF void zgl_bs_draw_line(ZGLBasicState *bs, f32 mv[16], f32 x0, f32 y0, f32 x1, f32 y1, ZGLColor color);
+ZGLDEF void zgl_bs_fill_rect(ZGLBasicState *bs, f32 mv[16], f32 x, f32 y, f32 w, f32 h, ZGLColor col);
+ZGLDEF void zgl_bs_fill_quad(ZGLBasicState *bs, f32 mv[16], f32 x0, f32 y0, f32 x1, f32 y1, f32 x2, f32 y2, f32 x3, f32 y3, ZGLColor col);
+ZGLDEF void zgl_bs_fill_circle(ZGLBasicState *bs, f32 mv[16], f32 cx, f32 cy, f32 r, ZGLColor color);
 
 ZGLDEF  b32 zgl_load_texture2d_from_memory(ZGLTexture *tex, void const *data, i32 width, i32 height, i32 channel_count);
 ZGLDEF  b32 zgl_load_texture2d_from_file(ZGLTexture *texture, b32 flip_vertically, char const *filename);
-ZGLDEF void zgl_bs_draw_textured_rect(ZGLBasicState *bs, ZGLTexture *tex, f32 x, f32 y, f32 w, f32 h, b32 v_up);
-ZGLDEF void zgl_bs_draw_textured_subrect( ZGLBasicState *bs, ZGLTexture *tex, f32 x, f32 y, f32 w, f32 h, f32 u0, f32 v0, f32 u1, f32 v1,b32 v_up);
+ZGLDEF void zgl_bs_draw_textured_rect(ZGLBasicState *bs, ZGLTexture *tex, f32 mv[16], f32 x, f32 y, f32 w, f32 h, b32 v_up);
+ZGLDEF void zgl_bs_draw_textured_subrect( ZGLBasicState *bs, ZGLTexture *tex, f32 mv[16], f32 x, f32 y, f32 w, f32 h, f32 u0, f32 v0, f32 u1, f32 v1,b32 v_up);
 
 ZGLDEF b32 zgl_load_font(ZGLBasicState *bs, const char *filename, f32 size_in_pixels);
 ZGLDEF void zgl_draw_string(ZGLBasicState *bs, const char* text, f32 *x, f32 *y, ZGLColor color);
@@ -255,10 +271,10 @@ static ZGLShaderError zgl_create_shader(ZGLShader *shader, const char* vertex_sh
 
 static void zgl_bs_set_resolution(ZGLBasicState *bs, i32 window_width, i32 window_height) {
 
-	f32 left   = 0.0f;
-	f32 right  = cast(f32)window_width;
-	f32 bottom = cast(f32)window_height;//0.0f;
-	f32 top    = 0.0f;//cast(f32)window_height;
+	f32 left   = -cast(f32)window_width / 2.0f;
+	f32 right  = cast(f32)window_width / 2.0f;
+	f32 bottom = -cast(f32)window_height / 2.0f;
+	f32 top    = cast(f32)window_height / 2.0f;
 	f32 znear  = 0.0f;
 	f32 zfar   = 1.0f;
 
@@ -419,8 +435,6 @@ b32 zgl_load_texture2d_from_memory(ZGLTexture *tex, void const *data, i32 width,
 	assert(GL_MAX_TEXTURE_SIZE > width);
 	assert(GL_MAX_TEXTURE_SIZE > height);
 
-	zout("w: %d, h:%d, max: %d", width, height, GL_MAX_TEXTURE_SIZE);
-
 	glTexImage2D(GL_TEXTURE_2D, 0,
 	             zglInternalTextureFormat_8[channel_count-1],
 	             width, height, 0,
@@ -453,8 +467,68 @@ b32 zgl_load_texture2d_from_file(ZGLTexture *texture, b32 flip_vertically, char 
 	return result;
 }
 
+ZGLDEF void zgl_bs_draw_circle(ZGLBasicState *bs, f32 mv[16], f32 cx, f32 cy, f32 r, ZGLColor color) {
+
+	i32 n = ZGL_BS_MAX_VERTEX_COUNT;
+	f32 dr = 2.0f * M_PI / n;
+	for (i32 i = 0; i < n; ++i) {
+		f32 x = cx + r * cosf(i * dr);
+		f32 y = cy + r * sinf(i * dr);
+		bs->vertices[i].x = x;
+		bs->vertices[i].y = y;
+	}
+
+	zgl__bs_setup_ortho_colour_state(bs, ZGL_BS_MAX_VERTEX_COUNT, color);
+	zgl_set_uniform_mat4(&bs->ortho_col_shader, "u_model_view_mat", mv);
+
+	glDrawArrays(GL_LINE_LOOP, 0, ZGL_BS_MAX_VERTEX_COUNT);
+}
+
+ZGLDEF void zgl_bs_fill_circle(ZGLBasicState *bs, f32 mv[16], f32 cx, f32 cy, f32 r, ZGLColor color) {
+
+	i32 n = ZGL_BS_MAX_VERTEX_COUNT;
+	f32 dr = 2.0f * M_PI / (n - 2);
+	bs->vertices[0].x = cx;
+	bs->vertices[0].y = cy;
+	for (i32 i = 1; i < n; ++i) {
+		f32 x = cx + r * cosf(i * dr);
+		f32 y = cy + r * sinf(i * dr);
+		bs->vertices[i].x = x;
+		bs->vertices[i].y = y;
+	}
+
+	zgl__bs_setup_ortho_colour_state(bs, ZGL_BS_MAX_VERTEX_COUNT, color);
+	zgl_set_uniform_mat4(&bs->ortho_col_shader, "u_model_view_mat", mv);
+
+	glDrawArrays(GL_TRIANGLE_FAN, 0, ZGL_BS_MAX_VERTEX_COUNT);
+}
+
+ZGLDEF void zgl_bs_draw_point(ZGLBasicState *bs, f32 mv[16], f32 x, f32 y, ZGLColor color) {
+
+	bs->vertices[0].x = x;
+	bs->vertices[0].y = y;
+
+	zgl__bs_setup_ortho_colour_state(bs, ZGL_BS_MAX_VERTEX_COUNT, color);
+	zgl_set_uniform_mat4(&bs->ortho_col_shader, "u_model_view_mat", mv);
+
+	glDrawArrays(GL_POINTS, 0, 1);
+}
+
+ZGLDEF void zgl_bs_draw_line(ZGLBasicState *bs, f32 mv[16], f32 x0, f32 y0, f32 x1, f32 y1, ZGLColor color) {
+
+	bs->vertices[0].x = x0;
+	bs->vertices[0].y = y0;
+	bs->vertices[1].x = x1;
+	bs->vertices[1].y = y1;
+
+	zgl__bs_setup_ortho_colour_state(bs, ZGL_BS_MAX_VERTEX_COUNT, color);
+	zgl_set_uniform_mat4(&bs->ortho_col_shader, "u_model_view_mat", mv);
+
+	glDrawArrays(GL_LINES, 0, 2);
+}
 
 ZGLDEF void zgl_bs_draw_quad(ZGLBasicState *bs,
+		f32 mv[16],
 		f32 x0, f32 y0,
 		f32 x1, f32 y1,
 		f32 x2, f32 y2,
@@ -474,14 +548,48 @@ ZGLDEF void zgl_bs_draw_quad(ZGLBasicState *bs,
 	bs->vertices[3].y = y3;
 
 	zgl__bs_setup_ortho_colour_state(bs, 4, col);
+	zgl_set_uniform_mat4(&bs->ortho_col_shader, "u_model_view_mat", mv);
+
+	glDrawElements(GL_LINE_STRIP, 6, GL_UNSIGNED_SHORT, NULL);
+
+}
+
+ZGLDEF void zgl_bs_draw_rect(ZGLBasicState *bs, f32 mv[16], f32 x, f32 y, f32 w, f32 h, ZGLColor col) {
+	zgl_bs_draw_quad(bs, mv, x, y, x+w, y, x+w, y+h, x, y+h, col);
+}
+
+ZGLDEF void zgl_bs_fill_quad(ZGLBasicState *bs,
+		f32 mv[16],
+		f32 x0, f32 y0,
+		f32 x1, f32 y1,
+		f32 x2, f32 y2,
+		f32 x3, f32 y3,
+		ZGLColor col) {
+
+	bs->vertices[0].x = x0;
+	bs->vertices[0].y = y0;
+
+	bs->vertices[1].x = x1;
+	bs->vertices[1].y = y1;
+
+	bs->vertices[2].x = x2;
+	bs->vertices[2].y = y2;
+
+	bs->vertices[3].x = x3;
+	bs->vertices[3].y = y3;
+
+	zgl__bs_setup_ortho_colour_state(bs, 4, col);
+	zgl_set_uniform_mat4(&bs->ortho_col_shader, "u_model_view_mat", mv);
+
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
+
 }
 
-ZGLDEF void zgl_bs_draw_rect(ZGLBasicState *bs, f32 x, f32 y, f32 w, f32 h, ZGLColor col) {
-	zgl_bs_draw_quad(bs, x, y, x+w, y, x+w, y+h, x, y+h, col);
+ZGLDEF void zgl_bs_fill_rect(ZGLBasicState *bs, f32 mv[16], f32 x, f32 y, f32 w, f32 h, ZGLColor col) {
+	zgl_bs_fill_quad(bs, mv, x, y, x+w, y, x+w, y+h, x, y+h, col);
 }
 
-ZGLDEF void zgl_bs_draw_textured_rect(ZGLBasicState *bs, ZGLTexture *tex, f32 x, f32 y, f32 w, f32 h, b32 v_up) {
+ZGLDEF void zgl_bs_draw_textured_rect(ZGLBasicState *bs, ZGLTexture *tex, f32 mv[16], f32 x, f32 y, f32 w, f32 h, b32 v_up) {
 	bs->vertices[0].x = x;
 	bs->vertices[0].y = y;
 	bs->vertices[0].u = 0.0f;
@@ -504,6 +612,7 @@ ZGLDEF void zgl_bs_draw_textured_rect(ZGLBasicState *bs, ZGLTexture *tex, f32 x,
 
 	zgl_use_shader(&bs->ortho_tex_shader);
 	zgl_set_uniform_mat4(&bs->ortho_tex_shader, "u_ortho_mat", bs->ortho_mat);
+	zgl_set_uniform_mat4(&bs->ortho_tex_shader, "u_model_view_mat", mv);
 	zgl_bind_texture2d(tex, 0, bs->mipmap_sampler);
 
 	zgl_vbo_copy(bs->vbo, bs->vertices, 4*zen_sizeof(bs->vertices[0]), 0);
@@ -517,7 +626,7 @@ ZGLDEF void zgl_bs_draw_textured_rect(ZGLBasicState *bs, ZGLTexture *tex, f32 x,
 }
 
 ZGLDEF void zgl_bs_draw_textured_subrect(
-		ZGLBasicState *bs, ZGLTexture *tex, 
+		ZGLBasicState *bs, ZGLTexture *tex, f32 mv[16], 
 		f32 x0, f32 y0, f32 x1, f32 y1, 
 		f32 u0, f32 v0, f32 u1, f32 v1,b32 v_up) {
 
@@ -543,6 +652,7 @@ ZGLDEF void zgl_bs_draw_textured_subrect(
 
 	zgl_use_shader(&bs->ortho_tex_shader);
 	zgl_set_uniform_mat4(&bs->ortho_tex_shader, "u_ortho_mat", bs->ortho_mat);
+	zgl_set_uniform_mat4(&bs->ortho_col_shader, "u_model_view_mat", mv);
 	zgl_bind_texture2d(tex, 0, bs->mipmap_sampler);
 
 	zgl_vbo_copy(bs->vbo, bs->vertices, 4*zen_sizeof(bs->vertices[0]), 0);
@@ -579,7 +689,7 @@ static void zgl_bs_draw_font(ZGLBasicState *bs, stbtt_aligned_quad *q, b32 up){
 
 	zgl_use_shader(&bs->ortho_font_shader);
 	zgl_set_uniform_mat4(&bs->ortho_font_shader, "u_ortho_mat", bs->ortho_mat);
-	zgl_bind_texture2d(&bs->font.font_texture, 0, bs->linear_sampler);
+	zgl_bind_texture2d(&bs->font.font_texture, 0, bs->mipmap_sampler);
 
 	zgl_vbo_copy(bs->vbo, bs->vertices, 4*zen_sizeof(bs->vertices[0]), 0);
 
@@ -588,6 +698,7 @@ static void zgl_bs_draw_font(ZGLBasicState *bs, stbtt_aligned_quad *q, b32 up){
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bs->ebo);
 
+	//glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_SHORT, NULL);
 }
 
@@ -719,8 +830,9 @@ ZGLDEF void zgl_bs_initialize(ZGLBasicState *bs, int window_width, int window_he
 		"precision mediump float;"
 		"layout (location = 0) in vec4 a_position;\n"
 		"uniform mat4 u_ortho_mat;\n"
+		"uniform mat4 u_model_view_mat;\n"
 		"void main(void) {\n"
-		"	gl_Position = u_ortho_mat * a_position;\n"
+		"	gl_Position = u_ortho_mat * u_model_view_mat * a_position;\n"
 		"}\n",
 
 		"#version 420 core\n"
@@ -739,9 +851,10 @@ ZGLDEF void zgl_bs_initialize(ZGLBasicState *bs, int window_width, int window_he
 		"layout (location = 0) in vec4 a_position;\n"
 		"layout (location = 1) in vec2 a_tex_coord;\n"
 		"uniform mat4 u_ortho_mat;\n"
+		"uniform mat4 u_model_view_mat;\n"
 		"out vec2 v_tex_coord;\n"
 		"void main(void) {\n"
-		"	gl_Position = u_ortho_mat * a_position;\n"
+		"	gl_Position = u_ortho_mat * u_model_view_mat * a_position;\n"
 		"	v_tex_coord = a_tex_coord;\n"
 		"}\n",
 

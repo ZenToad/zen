@@ -22,25 +22,17 @@
 extern "C" {
 #endif
 
+#ifndef uint8
 #include <stdint.h>
-#include <stddef.h>
-
-typedef int8_t  	i8;
-typedef int16_t 	i16;
-typedef int32_t 	i32;
-typedef int64_t 	i64;
-
-typedef uint8_t  	u8;
-typedef uint16_t 	u16;
-typedef uint32_t 	u32;
-typedef uint64_t 	u64;
-
-typedef i8  b8;
-typedef i16 b16;
-typedef i32 b32; // NOTE(tim): Prefer this!!!
-
-typedef float 		f32;
-typedef double 	f64;
+typedef int8_t int8;
+typedef int16_t int16;
+typedef int32_t int32;
+typedef int64_t int64;
+typedef uint8_t uint8;
+typedef uint16_t uint16;
+typedef uint32_t uint32;
+typedef uint64_t uint64;
+#endif
 
 typedef size_t    usize;
 typedef ptrdiff_t isize;
@@ -59,6 +51,8 @@ typedef ptrdiff_t isize;
 
 
 #define zout(M, ...) fprintf(stdout, M "\n", ##__VA_ARGS__)
+#define zfout(v) fprintf(stdout, #v ": %.4f", v)
+#define ziout(v) fprintf(stdout, #v ": %d\n", v)
 
 
 #ifdef ZEN_H_STATIC
@@ -67,7 +61,6 @@ typedef ptrdiff_t isize;
 #define ZENHDEF extern
 #endif
 
-ZENHDEF float zen_elapsed_time();
 
 #ifdef __cplusplus
 }
@@ -78,28 +71,6 @@ ZENHDEF float zen_elapsed_time();
 
 #ifdef ZEN_H_IMPLEMENTATION
 
-ZENHDEF float zen_elapsed_time() {
-		static int first = 1;
-		static LARGE_INTEGER prev;
-		static double factor;
-
-		LARGE_INTEGER now;
-		QueryPerformanceCounter( &now );
-
-		if ( first )
-		{
-			first = 0;
-			prev = now;
-			LARGE_INTEGER freq;
-			QueryPerformanceFrequency( &freq );
-			factor = 1.0 / (double)freq.QuadPart;
-			return 0;
-		}
-
-		float elapsed = (float)((double)(now.QuadPart - prev.QuadPart) * factor);
-		prev = now;
-		return elapsed;
-}
 
 #endif // ZEN_IMPLEMENTATION
 
