@@ -22,7 +22,11 @@
 extern "C" {
 #endif
 
-#ifndef uint8
+#if defined(ZEN_LIB_DEV)
+#include <stdio.h>
+#endif
+  
+#if !defined(int32_t)
 #include <stdint.h>
 typedef int8_t int8;
 typedef int16_t int16;
@@ -32,10 +36,11 @@ typedef uint8_t uint8;
 typedef uint16_t uint16;
 typedef uint32_t uint32;
 typedef uint64_t uint64;
-#endif
-
+typedef int32 b32;
 typedef size_t    usize;
 typedef ptrdiff_t isize;
+#endif
+
 
 
 // NOTE(tim): Easier to search for
@@ -45,15 +50,31 @@ typedef ptrdiff_t isize;
 // NOTE(tim): Because a signed sizeof is more useful
 #define zen_sizeof(x) cast(isize)(sizeof(x))
 
-#include <stdio.h>
+
 #define zdebug(M, ...) fprintf(stdout, "DEBUG %s:%d: " M "\n",\
         __FILE__, __LINE__, ##__VA_ARGS__)
 
 
 #define zout(M, ...) fprintf(stdout, M "\n", ##__VA_ARGS__)
-#define zfout(v) fprintf(stdout, #v ": %.4f", v)
+#define zfout(v) fprintf(stdout, #v ": %.4f\n", v)
 #define ziout(v) fprintf(stdout, #v ": %d\n", v)
 
+
+#ifndef zen_inline
+	#if defined(_MSC_VER)
+		#if _MSC_VER < 1300
+		#define zen_inline
+		#else
+		#define zen_inline __forceinline
+		#endif
+	#else
+		#define zen_inline __attribute__ ((__always_inline__))
+	#endif
+#endif
+
+#ifndef zen_offset_of
+#define zen_offset_of(Type, element) ((isize)&(((Type *)0)->element))
+#endif
 
 #ifdef ZEN_H_STATIC
 #define ZENHDEF static

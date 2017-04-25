@@ -11,19 +11,31 @@
 extern "C" {
 #endif 
 
+#if defined(ZEN_LIB_DEV)
+#include "GLFW/glfw3.h"
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include "GLFW/glfw3native.h"
+#endif
+
 typedef struct ZGLFW {
 
    const char *window_title;
 
    int major_version;
    int minor_version;
-   int window_width;
-	float window_widthf;
-   int window_height;
-	float window_heightf;
    int window_cursor_mode;
    int window_background;
    int should_close;
+
+	int window_width;
+	int window_height;
+	float window_widthf;
+	float window_heightf;
+
+	int display_width;
+	int display_height;
+	float display_widthf;
+	float display_heightf;
 
 	double current_time;
 	double last_time;
@@ -35,19 +47,23 @@ typedef struct ZGLFW {
 	float mouse_dy;
 	float last_mouse_x;
 	float last_mouse_y;
-
+	float mouse_scroll;
+	int mouse_button[3];
+ 
    GLFWwindow* window;
    void (*error_callback)(int, const char*);
    void (*key_callback)(GLFWwindow*, int, int, int, int);
    void (*window_size_callback)(GLFWwindow*, int, int);
+	void (*character_callback)(GLFWwindow*, unsigned int);
+	void (*mouse_button_callback)(GLFWwindow*, int, int, int);
+	void (*scroll_callback)(GLFWwindow*, double, double);
 
 	int keys[GLFW_KEY_LAST];
-	
 
 } ZGLFW;
 
 ZGLFWDEF void zglfw_init(ZGLFW *glfw);
-ZGLFWDEF void zglfw_show_window(ZGLFW &glfw);
+ZGLFWDEF void zglfw_show_window(ZGLFW *glfw);
 ZGLFWDEF int zglfw_is_running(ZGLFW *glfw);
 ZGLFWDEF void zglfw_begin(ZGLFW *glfw);
 ZGLFWDEF void zglfw_end(ZGLFW *glfw);
@@ -63,19 +79,56 @@ ZGLFWDEF void zglfw_quit(ZGLFW *glfw);
 // Implementation
 //------------------------------------------ 
 //
-#ifdef ZEN_GLFW_IMPLEMENTATION
+#if defined(ZEN_GLFW_IMPLEMENTATION) || defined(ZEN_LIB_DEV) 
 
+#if defined(ZEN_LIB_DEV)
+#include <stdio.h>
+#include "zen.h"
+#endif
+ 
+typedef void* (* GLADloadproc)(const char *name);
+int gladLoadGLLoader(GLADloadproc load);
 
-static void zglfw_default_error_callback(int error, const char *description) {
+static void zglfw_default_error_callback(int, const char *description) {
    fprintf(stderr, "Error: %s\n", description);
+}
+
+static void zglfw_default_key_callback(GLFWwindow*, int, int, int, int) {
+
+}
+
+static void zglfw_default_window_size_callback(GLFWwindow*, int width, int height) {
+	glViewport(0, 0, width, height);
+}
+
+static void zglfw_default_character_callback(GLFWwindow*, unsigned int character) {
+	zout("Types: %c", character);
+}
+
+static void zglfw_default_mouse_button_callback(GLFWwindow *window, int button, int action, int) {
+	ZGLFW *glfw = (ZGLFW *)glfwGetWindowUserPointer(window);
+	if (glfw) {
+		if (action == GLFW_PRESS)
+			glfw->mouse_button[button] = 1;
+		else
+			glfw->mouse_button[button] = 0;
+	}
+}
+
+static void zglfw_default_scroll_callback(GLFWwindow *window, double /*xoffset*/, double yoffset) {
+	ZGLFW *glfw = (ZGLFW *)glfwGetWindowUserPointer(window);
+	if (glfw) {
+		glfw->mouse_scroll += yoffset;
+	}
 }
 
 ZGLFWDEF void zglfw_init(ZGLFW *glfw) {
 
-   if (!glfw->error_callback) {
-      glfw->error_callback = zglfw_default_error_callback;
-   }
-   glfwSetErrorCallback(glfw->error_callback);
+   if (glfw->error_callback) {
+		glfwSetErrorCallback(glfw->error_callback);
+   } else {
+		glfwSetErrorCallback(zglfw_default_error_callback);
+	}
 
 	if (!glfwInit()) {
       exit(EXIT_FAILURE);
@@ -92,13 +145,37 @@ ZGLFWDEF void zglfw_init(ZGLFW *glfw) {
 		exit(EXIT_FAILURE);
 	}
 
+	glfwSetWindowUserPointer(glfw->window, glfw);
+
    if (glfw->key_callback) {
 		glfwSetKeyCallback(glfw->window, glfw->key_callback);
-   }
+   } else {
+		glfwSetKeyCallback(glfw->window, zglfw_default_key_callback);
+	}
 
    if (glfw->window_size_callback) {
 		glfwSetWindowSizeCallback(glfw->window, glfw->window_size_callback);
-   }
+   } else {
+		glfwSetWindowSizeCallback(glfw->window, zglfw_default_window_size_callback);
+	}
+
+	if (glfw->character_callback) {
+		glfwSetCharCallback(glfw->window, glfw->character_callback);
+	} else {
+		glfwSetCharCallback(glfw->window, zglfw_default_character_callback);
+	}
+
+	if (glfw->mouse_button_callback) {
+		glfwSetMouseButtonCallback(glfw->window, glfw->mouse_button_callback);
+	} else {
+		glfwSetMouseButtonCallback(glfw->window, zglfw_default_mouse_button_callback);
+	}
+
+	if (glfw->scroll_callback) {
+		glfwSetScrollCallback(glfw->window, glfw->scroll_callback);
+	} else {
+		glfwSetScrollCallback(glfw->window, zglfw_default_scroll_callback);
+	}
 
 	glfwSetInputMode(glfw->window, GLFW_CURSOR, glfw->window_cursor_mode);
 
@@ -160,13 +237,25 @@ ZGLFWDEF void zglfw_begin(ZGLFW *glfw) {
    int a = (glfw->window_background >> 24) & 0xFF;
    glClearColor(r / 255.99f, g / 255.99f, b / 255.99f, a / 255.99f);
 
-   glfwGetFramebufferSize(glfw->window, &glfw->window_width, &glfw->window_height);
+	glfwGetWindowSize(glfw->window, &glfw->window_width, &glfw->window_height);
 	glfw->window_widthf = glfw->window_width;
 	glfw->window_heightf = glfw->window_height;
+
+   glfwGetFramebufferSize(glfw->window, &glfw->display_width, &glfw->display_height);
+	glfw->display_widthf = glfw->display_width;
+	glfw->display_heightf = glfw->display_height;
 
 }
 
 ZGLFWDEF void zglfw_end(ZGLFW *glfw) {
+
+	for (int i = 0; i < 3; ++i) {
+		if (glfw->mouse_button[i]) {
+			glfw->mouse_button[i]++;
+		}
+	}
+
+	glfw->mouse_scroll = 0.0f;
    glfwPollEvents();
    glfwSwapBuffers(glfw->window);
 }
