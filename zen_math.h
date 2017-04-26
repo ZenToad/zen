@@ -109,6 +109,8 @@ ZMATHDEF Vector2_t add_vec2(Vector2_t a, Vector2_t b);
 ZMATHDEF Vector2_t sub_vec2(Vector2_t a, Vector2_t b);
 ZMATHDEF Vector2_t mul_vec2(Vector2_t v, float s);
 ZMATHDEF float dot_vec2(Vector2_t a, Vector2_t b);
+ZMATHDEF float len_vec2(Vector2_t a);
+ZMATHDEF float len_sqr_vec2(Vector2_t a);
 ZMATHDEF Vector2_t norm_vec2(Vector2_t a);
 ZMATHDEF Vector2_t lerp_vec2(Vector2_t a, Vector2_t b, float t);
 
@@ -143,26 +145,131 @@ ZMATHDEF void print3x3(Matrix3x3_t m);
 #endif
 
 
+#ifdef __cplusplus
+
+zen_inline Vector2_t operator+(Vector2_t a) {return a;}
+zen_inline Vector2_t operator+(Vector2_t a, Vector2_t b) {return Vector2(a.x + b.x, a.y + b.y);}
+
+zen_inline Vector2_t operator-(Vector2_t a) {return Vector2(-a.x, -a.y);}
+zen_inline Vector2_t operator-(Vector2_t a, Vector2_t b) {return Vector2(a.x - b.x, a.y - b.y);}
+
+zen_inline Vector2_t operator*(Vector2_t a, float s) {return Vector2(a.x * s, a.y * s);}
+zen_inline Vector2_t operator*(float s, Vector2_t a) {return Vector2(a.x * s, a.y * s);}
+
+zen_inline Vector2_t operator/(Vector2_t a, float s) {return Vector2(a.x / s, a.y / s);}
+
+zen_inline Vector2_t& operator+=(Vector2_t &a, Vector2_t b) {return a = a + b;}
+zen_inline Vector2_t& operator-=(Vector2_t &a, Vector2_t b) {return a = a - b;}
+zen_inline Vector2_t& operator*=(Vector2_t &a, float s) {return a = a * s;}
+zen_inline Vector2_t& operator/=(Vector2_t &a, float s) {return a = a / s;}
+
+
+zen_inline float len(Vector2_t a) {return len_vec2(a);}
+zen_inline float len_sqr(Vector2_t a) {return len_sqr_vec2(a);}
+zen_inline float dot(Vector2_t a, Vector2_t b) {return dot_vec2(a, b);}
+zen_inline Vector2_t norm(Vector2_t a) {return norm_vec2(a);}
+zen_inline Vector2_t lerp(Vector2_t a, Vector2_t b, float t) {return (1.0f - t) * a + t * b;}
+
+
+zen_inline Matrix2x2_t operator*(Matrix2x2_t a, Matrix2x2_t b) {
+	Matrix2x2_t out;
+	for (int32 i = 0; i < 2; ++i) {
+		for (int32 j = 0; j < 2; ++j) {
+			float f = 0.f;
+			for (int32 k = 0; k < 2; ++k) {
+				f += a.m[i*2+k] * b.m[k*2+j];
+			}
+			out.m[i*2+j] = f;
+		}
+	}
+	return out;
+}
+
+zen_inline Matrix3x3_t operator*(Matrix3x3_t a, Matrix3x3_t b) {
+	Matrix3x3_t out;
+	for (int32 i = 0; i < 3; ++i) {
+		for (int32 j = 0; j < 3; ++j) {
+			float f = 0.f;
+			for (int32 k = 0; k < 3; ++k) {
+				f += a.m[i*3+k] * b.m[k*3+j];
+			}
+			out.m[i*3+j] = f;
+		}
+	}
+	return out;
+}
+
+zen_inline Vector3_t operator*(Matrix3x3_t m, Vector3_t v) {
+	Vector3_t out;
+	for (int32 i = 0; i < 3; ++i) {
+		float f = 0.f;
+		for (int32 j = 0; j < 3; ++j) {
+			f += m.m[j*3+i] * v.e[j];
+		}
+		out.e[i] = f;
+	}
+	return out;
+}
+
+zen_inline Matrix3x3_t translate(Vector2_t v) {
+	Matrix3x3_t trans = Matrix3x3();
+	trans.m[6] = v.x;
+	trans.m[7] = v.y;
+	return trans;
+}
+
+zen_inline Matrix3x3_t rotate2D(float rad) {
+	Matrix3x3_t rot = Matrix3x3();
+	float c = cosf(rad);
+	float s = sinf(rad);
+	rot.m[0] = c;
+	rot.m[1] = s;
+	rot.m[3] = -s;
+	rot.m[4] = c;
+	return rot;
+}
+
+zen_inline Matrix3x3_t scale(Vector2_t v) {
+	Matrix3x3_t scale = Matrix3x3();
+	scale.m[0] = v.x;
+	scale.m[4] = v.y;
+	return scale;
+}
+
+zen_inline void print(Matrix3x3_t m) {print3x3(m);}
+
+#endif
+
 #endif // __ZEN_MATN_H__
+
+
+//------------------------------------------ 
+//
+//
+// IMPLEMENTATION
+//
+//
+//------------------------------------------
+
 
 #ifdef ZEN_MATH_IMPLEMENTATION
 
-ZMATHDEF Color_t COLOR_WHITE = Color(255, 255, 255, 255);
-ZMATHDEF Color_t COLOR_SILVER = Color(191, 191, 191, 255);
-ZMATHDEF Color_t COLOR_GRAY = Color(128, 128, 128, 255);
-ZMATHDEF Color_t COLOR_BLACK = Color(0, 0, 0, 255);
-ZMATHDEF Color_t COLOR_RED = Color(255, 0, 0, 255);
-ZMATHDEF Color_t COLOR_MAROON = Color(128, 0, 0, 255);
-ZMATHDEF Color_t COLOR_YELLOW = Color(255, 255, 0, 255);
-ZMATHDEF Color_t COLOR_OLIVE = Color(128, 128, 0, 255);
-ZMATHDEF Color_t COLOR_LIME = Color(0, 255, 0, 255);
-ZMATHDEF Color_t COLOR_GREEN = Color(0, 128, 0, 255);
-ZMATHDEF Color_t COLOR_AQUA = Color(0, 255, 255, 255);
-ZMATHDEF Color_t COLOR_TEAL = Color(0, 128, 128, 255);
-ZMATHDEF Color_t COLOR_BLUE = Color(0, 0, 255, 255);
-ZMATHDEF Color_t COLOR_NAVY = Color(0, 0, 128, 255);
-ZMATHDEF Color_t COLOR_FUCHSIA = Color(255, 0, 255, 255);
-ZMATHDEF Color_t COLOR_PURPLE = Color(128, 0, 128, 255);
+Color_t COLOR_WHITE = Color(255, 255, 255, 255);
+Color_t COLOR_SILVER = Color(191, 191, 191, 255);
+Color_t COLOR_GRAY = Color(128, 128, 128, 255);
+Color_t COLOR_BLACK = Color(0, 0, 0, 255);
+Color_t COLOR_RED = Color(255, 0, 0, 255);
+Color_t COLOR_MAROON = Color(128, 0, 0, 255);
+Color_t COLOR_YELLOW = Color(255, 255, 0, 255);
+Color_t COLOR_OLIVE = Color(128, 128, 0, 255);
+Color_t COLOR_LIME = Color(0, 255, 0, 255);
+Color_t COLOR_GREEN = Color(0, 128, 0, 255);
+Color_t COLOR_AQUA = Color(0, 255, 255, 255);
+Color_t COLOR_TEAL = Color(0, 128, 128, 255);
+Color_t COLOR_BLUE = Color(0, 0, 255, 255);
+Color_t COLOR_NAVY = Color(0, 0, 128, 255);
+Color_t COLOR_FUCHSIA = Color(255, 0, 255, 255);
+Color_t COLOR_PURPLE = Color(128, 0, 128, 255);
 
 ZMATHDEF Matrix2x2_t Matrix2x2() {
 	Matrix2x2_t m;
@@ -240,6 +347,14 @@ ZMATHDEF Vector2_t mul_vec2(Vector2_t v, float s) {
 
 ZMATHDEF float dot_vec2(Vector2_t a, Vector2_t b) {
 	return a.x * b.x + a.y * b.y;
+}
+
+ZMATHDEF float len_vec2(Vector2_t a) {
+	return sqrt(a.x*a.x + a.y*a.y);
+}
+
+ZMATHDEF float len_sqr_vec2(Vector2_t a) {
+	return a.x*a.x + a.y*a.y;
 }
 
 ZMATHDEF Vector2_t norm_vec2(Vector2_t a) {

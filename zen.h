@@ -37,11 +37,14 @@ typedef uint16_t uint16;
 typedef uint32_t uint32;
 typedef uint64_t uint64;
 typedef int32 b32;
-typedef size_t    usize;
-typedef ptrdiff_t isize;
 #endif
 
+#if !defined(size_t) || !defined(ptrdiff_t)
+#include <stddef.h>
+#endif
 
+typedef size_t    usize;
+typedef ptrdiff_t isize;
 
 // NOTE(tim): Easier to search for
 #define cast(Type) (Type)
@@ -68,7 +71,7 @@ typedef ptrdiff_t isize;
 		#define zen_inline __forceinline
 		#endif
 	#else
-		#define zen_inline __attribute__ ((__always_inline__))
+		#define zen_inline __attribute__ ((__always_inline__)) inline
 	#endif
 #endif
 

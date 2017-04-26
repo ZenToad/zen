@@ -13,8 +13,10 @@ extern "C" {
 
 #if defined(ZEN_LIB_DEV)
 #include "GLFW/glfw3.h"
-#define GLFW_EXPOSE_NATIVE_WIN32
-#include "GLFW/glfw3native.h"
+//#if defined(_WIN32
+//#define GLFW_EXPOSE_NATIVE_WIN32
+//#include "GLFW/glfw3native.h"
+//#endif
 #endif
 
 typedef struct ZGLFW {
@@ -51,6 +53,7 @@ typedef struct ZGLFW {
 	int mouse_button[3];
  
    GLFWwindow* window;
+
    void (*error_callback)(int, const char*);
    void (*key_callback)(GLFWwindow*, int, int, int, int);
    void (*window_size_callback)(GLFWwindow*, int, int);
@@ -73,6 +76,44 @@ ZGLFWDEF void zglfw_quit(ZGLFW *glfw);
 }
 #endif 
 
+
+#ifdef __cplusplus
+class ZenGlfw {
+
+public:
+	
+	ZenGlfw() {
+		glfw = {0};
+		ptr = &glfw;
+	}
+
+	void defaults(int w, int h, const char *title) {
+		glfw.window_title = title;
+		glfw.major_version = 4;
+		glfw.minor_version = 4;
+		glfw.window_width = w;
+		glfw.window_height = h;
+		glfw.window_cursor_mode = GLFW_CURSOR_NORMAL;
+		glfw.window_background = 0xFF333333;
+	}
+
+	virtual ~ZenGlfw() { }
+
+	void init();
+	void showWindow();
+	int isRunning();
+	void begin();
+	void end();
+	void quit();
+
+	ZGLFW glfw;
+	ZGLFW *ptr;
+
+};
+
+#endif // CPP extra stuff
+
+
 #endif //__ZEN_GLFW_H__
 
 //------------------------------------------ 
@@ -93,8 +134,15 @@ static void zglfw_default_error_callback(int, const char *description) {
    fprintf(stderr, "Error: %s\n", description);
 }
 
-static void zglfw_default_key_callback(GLFWwindow*, int, int, int, int) {
-
+static void zglfw_default_key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
+	ZGLFW *glfw = (ZGLFW *)glfwGetWindowUserPointer(window);
+	if (glfw) {
+		if (action) {
+			glfw->keys[key]++;
+		} else {
+			glfw->keys[key] = 0;
+		}
+	}
 }
 
 static void zglfw_default_window_size_callback(GLFWwindow*, int width, int height) {
@@ -137,6 +185,7 @@ ZGLFWDEF void zglfw_init(ZGLFW *glfw) {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, glfw->major_version);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, glfw->minor_version);
    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+
 	glfwWindowHint(GLFW_SAMPLES, 4);
 
 	glfw->window = glfwCreateWindow(glfw->window_width, glfw->window_height, glfw->window_title, NULL, NULL);
@@ -183,8 +232,6 @@ ZGLFWDEF void zglfw_init(ZGLFW *glfw) {
 	gladLoadGLLoader((GLADloadproc) glfwGetProcAddress);
 	glfwSwapInterval(1);
 
-   //glfwShowWindow(glfw->window);
-
 	printf("OpenGL Loaded\n");
 	printf("Vendor:   %s\n", glGetString(GL_VENDOR));
 	printf("Renderer: %s\n", glGetString(GL_RENDERER));
@@ -210,14 +257,6 @@ ZGLFWDEF void zglfw_begin(ZGLFW *glfw) {
 	glfw->last_time = glfw->current_time;
 	glfw->current_time = glfwGetTime();
 	glfw->delta_time = glfw->current_time - glfw->last_time;
-
-	for (int i = 32; i < GLFW_KEY_LAST; ++i) {
-		if (glfwGetKey(glfw->window, i) == GLFW_PRESS) {
-			glfw->keys[i] += 1;
-		} else {
-			glfw->keys[i] = 0;
-		}
-	}
 
 	double x, y;
 	glfwGetCursorPos(glfw->window, &x, &y);
@@ -249,6 +288,12 @@ ZGLFWDEF void zglfw_begin(ZGLFW *glfw) {
 
 ZGLFWDEF void zglfw_end(ZGLFW *glfw) {
 
+	for (int i = 32; i < GLFW_KEY_LAST; ++i) {
+		if (glfw->keys[i]) {
+			glfw->keys[i]++;
+		} 
+	}
+
 	for (int i = 0; i < 3; ++i) {
 		if (glfw->mouse_button[i]) {
 			glfw->mouse_button[i]++;
@@ -264,6 +309,35 @@ ZGLFWDEF void zglfw_quit(ZGLFW *glfw) {
 	glfwDestroyWindow(glfw->window);
 	glfwTerminate();
 }
+
+#ifdef __cplusplus
+
+void ZenGlfw::init() {
+	zglfw_init(ptr);
+}
+
+void ZenGlfw::showWindow() {
+	zglfw_show_window(ptr);
+}
+
+int ZenGlfw::isRunning() {
+	return zglfw_is_running(ptr);
+}
+
+void ZenGlfw::begin() {
+	zglfw_begin(ptr);
+}
+
+void ZenGlfw::end() {
+	zglfw_end(ptr);
+}
+
+void ZenGlfw::quit() {
+	zglfw_quit(ptr);
+}
+
+
+#endif // cpp stuff
 
 #endif // ZEN_GLFW_IMPLEMENTATION
 

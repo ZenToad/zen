@@ -1,0 +1,16 @@
+--------------------------------------------------------------------------------
+TODO
+--------------------------------------------------------------------------------
+
+* fix the math library to add operator overloading and 
+  references if __cplusplus is defined
+
+* Update the box_2d debug drawing to use the zen_gl.h stuff
+
+* Update zen_gl.h to use the better caching from the box_2d
+  debug example
+
+* Can we add some C++ stuff to the libraries to make them
+  more usefull without taking away from the C part?
+
+

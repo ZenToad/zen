@@ -72,11 +72,17 @@ ZIMGUIDEF void zen_imgui_begin(ZGLFW *glfw) {
 
 	io.MouseWheel = glfw->mouse_scroll;
 
+	for (int i = 32; i < GLFW_KEY_LAST; ++i) {
+		io.KeysDown[i] = glfw->keys[i];
+	}
+
+
 	// Hide OS mouse cursor if ImGui is drawing it
 	glfwSetInputMode(glfw->window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);
 
 	// Start the frame
 	ImGui::NewFrame();
+
 }
 
 ZIMGUIDEF void zen_imgui_end() {
