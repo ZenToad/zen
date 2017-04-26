@@ -12,7 +12,8 @@
 #endif
 
 ZIMGUIDEF void zen_imgui_init(ZGLFW *glfw);
-ZIMGUIDEF void zen_imgui_new_frame(ZGLFW *glfw);
+ZIMGUIDEF void zen_imgui_begin(ZGLFW *glfw);
+ZIMGUIDEF void zen_imgui_end();
 ZIMGUIDEF void zen_imgui_quit();
 
 
@@ -41,7 +42,7 @@ typedef struct ZenImguiState_t {
 
 static ZenImguiState_t __zen_imgui_state = {0};
 
-ZIMGUIDEF void zen_imgui_new_frame(ZGLFW *glfw) {
+ZIMGUIDEF void zen_imgui_begin(ZGLFW *glfw) {
 
 	ImGuiIO& io = ImGui::GetIO();
 	
@@ -76,6 +77,10 @@ ZIMGUIDEF void zen_imgui_new_frame(ZGLFW *glfw) {
 
 	// Start the frame
 	ImGui::NewFrame();
+}
+
+ZIMGUIDEF void zen_imgui_end() {
+	ImGui::Render();
 }
 
 static const char* zen_imgui_default_get_clipboard_callback(void* user_data) {
