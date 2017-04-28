@@ -73,7 +73,7 @@ ZIMGUIDEF void zen_imgui_begin(ZGLFW *glfw) {
 	io.MouseWheel = glfw->mouse_scroll;
 
 	for (int i = 32; i < GLFW_KEY_LAST; ++i) {
-		io.KeysDown[i] = glfw->keys[i];
+		io.KeysDown[i] = glfw->keys[i] ? true : false;
 	}
 
 

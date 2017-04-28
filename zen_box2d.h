@@ -13,6 +13,34 @@
 #endif
 
 
+struct b2AABB;
+struct GLRenderPoints;
+struct GLRenderLines;
+struct GLRenderTriangles;
+
+//
+struct Camera
+{
+	Camera()
+	{
+		m_center.Set(0.0f, 20.0f);
+		m_extent = 25.0f;
+		m_zoom = 1.0f;
+		m_width = 1280;
+		m_height = 800;
+	}
+
+	b2Vec2 ConvertScreenToWorld(const b2Vec2& screenPoint);
+	b2Vec2 ConvertWorldToScreen(const b2Vec2& worldPoint);
+	void BuildProjectionMatrix(float32* m, float32 zBias);
+
+	b2Vec2 m_center;
+	float32 m_extent;
+	float32 m_zoom;
+	int32 m_width;
+	int32 m_height;
+};
+
 // This class implements debug drawing callbacks that are invoked
 // inside b2World::Step.
 class DebugDraw : public b2Draw {
@@ -47,9 +75,9 @@ class DebugDraw : public b2Draw {
 		void Flush();
 
 	private:
-		//GLRenderPoints* m_points;
-		//GLRenderLines* m_lines;
-		//GLRenderTriangles* m_triangles;
+		GLRenderPoints* m_points;
+		GLRenderLines* m_lines;
+		GLRenderTriangles* m_triangles;
 };
 
 
@@ -65,6 +93,9 @@ class DebugDraw : public b2Draw {
 #endif
 
 #define BUFFER_OFFSET(x)  ((const void*) (x))
+
+DebugDraw g_debugDraw;
+Camera g_camera;
 
 b2Vec2 Camera::ConvertScreenToWorld(const b2Vec2& ps)
 {
@@ -806,7 +837,7 @@ void DebugDraw::DrawString(int x, int y, const char *string, ...)
 	va_list arg;
 	va_start(arg, string);
 	ImGui::Begin("Overlay", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar);
-	ImGui::SetCursorPos(b2Vec2(float(x), float(y)));
+	ImGui::SetCursorPos(ImVec2(float(x), float(y)));
 	ImGui::TextColoredV(ImColor(230, 153, 153, 255), string, arg);
 	ImGui::End();
 	va_end(arg);
@@ -820,7 +851,7 @@ void DebugDraw::DrawString(const b2Vec2& pw, const char *string, ...)
 	va_list arg;
 	va_start(arg, string);
 	ImGui::Begin("Overlay", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar);
-	ImGui::SetCursorPos(ps);
+	ImGui::SetCursorPos(ImVec2(ps.x, ps.y));
 	ImGui::TextColoredV(ImColor(230, 153, 153, 255), string, arg);
 	ImGui::End();
 	va_end(arg);
