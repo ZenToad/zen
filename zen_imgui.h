@@ -114,6 +114,7 @@ static void zen_imgui_create_font() {
 	// Upload texture to graphics system
 	GLint last_texture;
 	glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
+	glActiveTexture(GL_TEXTURE0 + 1);
 	GLuint font_texture;
 	glGenTextures(1, &font_texture);
 	glBindTexture(GL_TEXTURE_2D, font_texture);
@@ -167,7 +168,7 @@ ZIMGUIDEF void zen_imgui_render(ImDrawData* draw_data) {
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
 	glEnable(GL_SCISSOR_TEST);
-	glActiveTexture(GL_TEXTURE0);
+	glActiveTexture(GL_TEXTURE0 + 1);
 
 	// Setup viewport, orthographic projection matrix
 	glViewport(0, 0, (GLsizei)fb_width, (GLsizei)fb_height);
@@ -182,7 +183,7 @@ ZIMGUIDEF void zen_imgui_render(ImDrawData* draw_data) {
 	ZGLShader *shader = &__zen_imgui_state.zen_imgui_shader;
 	ZenImguiState_t *state = &__zen_imgui_state;
 	glUseProgram(shader->program);
-	zgl_set_uniform_int(shader, "Texture", 0);
+	zgl_set_uniform_int(shader, "Texture", 1);
 	zgl_set_uniform_mat4(shader, "ProjMtx", &ortho_projection[0][0]);
 
 	glBindVertexArray(state->vao);

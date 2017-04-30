@@ -94,6 +94,13 @@ typedef union Color_t {
 	uint8 e[4];
 } Color_t;
 
+typedef struct Transform2d_t {
+
+	Vector2_t position;
+	Vector2_t scale;
+	float rotation;
+
+} Transform2d_t;
 
 ZMATHDEF Matrix2x2_t Matrix2x2();
 ZMATHDEF Matrix3x3_t Matrix3x3();
@@ -104,6 +111,7 @@ ZMATHDEF Vector3_t Vector3(float x, float y, float z);
 ZMATHDEF Vector4_t Vector4(float x, float y, float z, float w);
 
 ZMATHDEF Color_t Color(uint8 r, uint8 g, uint8 b, uint8 a);
+ZMATHDEF Transform2d_t Transform2d(Vector2_t position, float rotation, Vector2_t scale);
 
 ZMATHDEF Vector2_t add_vec2(Vector2_t a, Vector2_t b);
 ZMATHDEF Vector2_t sub_vec2(Vector2_t a, Vector2_t b);
@@ -331,6 +339,14 @@ ZMATHDEF Color_t Color(uint8 r, uint8 g, uint8 b, uint8 a) {
 	c.b = b;
 	c.a = a;
 	return c;
+}
+
+ZMATHDEF Transform2d_t Transform2d(Vector2_t position, float rotation, Vector2_t scale) {
+	Transform2d_t t;
+	t.position = position;
+	t.rotation = rotation;
+	t.scale = scale;
+	return t;
 }
 
 ZMATHDEF Vector2_t add_vec2(Vector2_t a, Vector2_t b) {
