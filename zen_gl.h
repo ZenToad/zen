@@ -461,7 +461,8 @@ b32 zgl_load_texture2d_from_memory(ZGLTexture *tex, void const *data, int32 widt
 	assert(GL_MAX_TEXTURE_SIZE > height);
 
 	glTexImage2D(GL_TEXTURE_2D, 0,
-	             zglInternalTextureFormat_8[channel_count-1],
+					//GL_RGBA8,
+					 zglInternalTextureFormat_8[channel_count-1],
 	             width, height, 0,
 	             gbglTextureFormat[channel_count-1],
 	             GL_UNSIGNED_BYTE, data);
@@ -486,7 +487,10 @@ b32 zgl_load_texture2d_from_file(ZGLTexture *texture, b32 flip_vertically, char 
 		fprintf(stderr, "Failed to load image: %s\n", filename);
 		result = false;
 	} else {
-		result = zgl_load_texture2d_from_memory(texture, data, width, height, comp);
+		ziout(width);
+		ziout(height);
+		ziout(comp);
+		result = zgl_load_texture2d_from_memory(texture, data, width, height, 4);
 		stbi_image_free(data);
 	}
 	return result;

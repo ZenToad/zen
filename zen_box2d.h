@@ -1,3 +1,8 @@
+//
+// This is a modified version of the Box2D software
+// Copyright (c) 2006-2013 Erin Catto http://www.box2d.org
+//
+
 #if !defined(__ZEN_BOX2D_H__)
 #define __ZEN_BOX2D_H__
 
@@ -888,3 +893,4 @@ void DebugDraw::Flush()
 
 
 #endif // ZEN_BOX2D_IMPLEMENTATION
+
