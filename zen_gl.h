@@ -139,7 +139,7 @@ typedef struct ZGLBasicState {
 
 
 ZGLDEF void zgl_bs_initialize(ZGLBasicState *bs);
-ZGLDEF void zgl_bs_begin(ZGLBasicState *bs, int32 window_width, int32 window_height);
+ZGLDEF void zgl_bs_begin(ZGLBasicState *bs, float window_width, float window_height);
 ZGLDEF void zgl_bs_end(ZGLBasicState *bs);
 ZGLDEF void zgl_bs_draw_rect(ZGLBasicState *bs, float mv[16], float x, float y, float w, float h, ZGLColor col);
 ZGLDEF void zgl_bs_draw_quad(ZGLBasicState *bs, float mv[16], float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3, ZGLColor col);
@@ -277,12 +277,12 @@ static ZGLShaderError zgl_create_shader(ZGLShader *shader, const char* vertex_sh
 
 }
 
-static void zgl_bs_set_resolution(ZGLBasicState *bs, int32 window_width, int32 window_height) {
+static void zgl_bs_set_resolution(ZGLBasicState *bs, float window_width, float window_height) {
 
-	float left   = -cast(float)window_width / 2.0f;
-	float right  = cast(float)window_width / 2.0f;
-	float bottom = -cast(float)window_height / 2.0f;
-	float top    = cast(float)window_height / 2.0f;
+	float left   = -window_width / 2.0f;
+	float right  = window_width / 2.0f;
+	float bottom = -window_height / 2.0f;
+	float top    = window_height / 2.0f;
 	float znear  = 0.0f;
 	float zfar   = 1.0f;
 
@@ -310,7 +310,7 @@ static void zgl_bs_set_resolution(ZGLBasicState *bs, int32 window_width, int32 w
 	bs->ortho_mat[15] = 1.0f;
 }
 
-ZGLDEF void zgl_bs_begin(ZGLBasicState *bs, int32 window_width, int32 window_height) {
+ZGLDEF void zgl_bs_begin(ZGLBasicState *bs, float window_width, float window_height) {
 	glBindVertexArray(bs->vao);
 	glDisable(GL_SCISSOR_TEST);
 	zgl_bs_set_resolution(bs, window_width, window_height);
@@ -487,9 +487,6 @@ b32 zgl_load_texture2d_from_file(ZGLTexture *texture, b32 flip_vertically, char 
 		fprintf(stderr, "Failed to load image: %s\n", filename);
 		result = false;
 	} else {
-		ziout(width);
-		ziout(height);
-		ziout(comp);
 		result = zgl_load_texture2d_from_memory(texture, data, width, height, 4);
 		stbi_image_free(data);
 	}
