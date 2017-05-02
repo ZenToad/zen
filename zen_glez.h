@@ -375,7 +375,7 @@ static void zglez_flush_render_lines() {
 	glBufferSubData(GL_ARRAY_BUFFER, 0, rlines->count * sizeof(Vector2_t), rlines->vertices);
 
 	glBindBuffer(GL_ARRAY_BUFFER, rlines->vbo_ids[1]);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, rlines->count * sizeof(Color_t), rlines->colors);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, rlines->count * sizeof(Colorf_t), rlines->colors);
 
 	glDrawArrays(GL_LINES, 0, rlines->count);
 
