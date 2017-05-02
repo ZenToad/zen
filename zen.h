@@ -75,8 +75,54 @@ typedef ptrdiff_t isize;
 	#endif
 #endif
 
+
+#ifndef zen_offset 
+#define zen_offset(x) ((const void*) (x))
+#endif
+
 #ifndef zen_offset_of
 #define zen_offset_of(Type, element) ((isize)&(((Type *)0)->element))
+#endif
+
+////////////////////////////////////////////////////////////////
+//
+// Debug
+//
+//
+
+
+#ifndef GB_DEBUG_TRAP
+	#if defined(_MSC_VER)
+	 	#if _MSC_VER < 1300
+		#define GB_DEBUG_TRAP() __asm int 3 /* Trap to debugger! */
+		#else
+		#define GB_DEBUG_TRAP() __debugbreak()
+		#endif
+	#else
+		#define GB_DEBUG_TRAP() raise(SIGTRAP)
+	#endif
+#endif
+
+#ifndef GB_ASSERT_MSG
+#define GB_ASSERT_MSG(cond, msg, ...) do { \
+	if (!(cond)) { \
+		gb_assert_handler(#cond, __FILE__, __LINE__, msg, ##__VA_ARGS__); \
+		GB_DEBUG_TRAP(); \
+	} \
+} while (0)
+#endif
+
+#ifndef GB_ASSERT
+#define GB_ASSERT(cond) GB_ASSERT_MSG(cond, NULL)
+#endif
+
+#ifndef GB_ASSERT_NOT_NULL
+#define GB_ASSERT_NOT_NULL(ptr) GB_ASSERT_MSG((ptr) != NULL, #ptr " must not be NULL")
+#endif
+
+// NOTE(bill): Things that shouldn't happen with a message!
+#ifndef GB_PANIC
+#define GB_PANIC(msg, ...) GB_ASSERT_MSG(0, msg, ##__VA_ARGS__)
 #endif
 
 #ifdef ZEN_H_STATIC
@@ -102,6 +148,7 @@ ZENHDEF void          stb_shuffle(void *p, size_t n, size_t sz,
 ZENHDEF void stb_reverse(void *p, size_t n, size_t sz);
 
 ZENHDEF unsigned long stb_randLCG_explicit(unsigned long seed);
+ZENHDEF void gb_assert_handler(char const *condition, char const *file, int line, char const *msg, ...);
 
 #define stb_rand_define(x,y)                                         \
                                                                      \
@@ -121,6 +168,19 @@ ZENHDEF unsigned long stb_randLCG_explicit(unsigned long seed);
 #endif // ZEN_H_INCLUDE
 
 #ifdef ZEN_H_IMPLEMENTATION
+
+void gb_assert_handler(char const *condition, char const *file, int line, char const *msg, ...) {
+	fprintf(stderr, "%s:%d: Assert Failure: ", file, line);
+	if (condition)
+		fprintf(stderr, "`%s` ", condition);
+	if (msg) {
+		va_list va;
+		va_start(va, msg);
+		vfprintf(stderr, msg, va);
+		va_end(va);
+	}
+	fprintf(stderr, "\n");
+}
 
 typedef struct { char d[4]; } stb__4;
 typedef struct { char d[8]; } stb__8;

@@ -217,7 +217,6 @@ ZGLDEF void zgl_draw_string(ZGLBasicState *bs, const char* text, float *x, float
 static char zgl_err_buf[1024];
 
  
-int32 const gbglTextureFormat[4] = { GL_RED, GL_RG, GL_RGB, GL_RGBA };
 int32 const zglInternalTextureFormat_8[4]  = { GL_R8,   GL_RG8,   GL_RGB8,	  GL_RGBA8   };
 
 
@@ -463,10 +462,9 @@ b32 zgl_load_texture2d_from_memory(ZGLTexture *tex, void const *data, int32 widt
 	assert(GL_MAX_TEXTURE_SIZE > height);
 
 	glTexImage2D(GL_TEXTURE_2D, 0,
-					//GL_RGBA8,
 					 zglInternalTextureFormat_8[channel_count-1],
 	             width, height, 0,
-	             gbglTextureFormat[channel_count-1],
+	             4,
 	             GL_UNSIGNED_BYTE, data);
 
    glGenerateMipmap(GL_TEXTURE_2D);
