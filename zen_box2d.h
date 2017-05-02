@@ -1,9 +1,5 @@
 //
-//  
-//
 // This is a modified version of the Box2D software
-//
-//
 // Copyright (c) 2006-2013 Erin Catto http://www.box2d.org
 //
 // This software is provided 'as-is', without any express or implied
@@ -19,6 +15,8 @@
 // 2. Altered source versions must be plainly marked as such, and must not be
 // misrepresented as being the original software.
 // 3. This notice may not be removed or altered from any source distribution.
+//
+//
 
 #if !defined(__ZEN_BOX2D_H__)
 #define __ZEN_BOX2D_H__
@@ -45,11 +43,9 @@ struct Camera
 {
 	Camera()
 	{
-		m_center.Set(0.0f, 20.0f);
-		m_extent = 25.0f;
-		m_zoom = 1.0f;
-		m_width = 1280;
-		m_height = 800;
+		m_center.Set(0.0f, 0.0f);
+		m_width = 780;
+		m_height = 780;
 	}
 
 	b2Vec2 ConvertScreenToWorld(const b2Vec2& screenPoint);
@@ -57,8 +53,6 @@ struct Camera
 	void BuildProjectionMatrix(float32* m, float32 zBias);
 
 	b2Vec2 m_center;
-	float32 m_extent;
-	float32 m_zoom;
 	int32 m_width;
 	int32 m_height;
 };
@@ -128,7 +122,7 @@ b2Vec2 Camera::ConvertScreenToWorld(const b2Vec2& ps)
 
 	float32 ratio = w / h;
 	b2Vec2 extents(ratio * 25.0f, 25.0f);
-	extents *= m_zoom;
+	extents *= 1.0f;
 
 	b2Vec2 lower = m_center - extents;
 	b2Vec2 upper = m_center + extents;
@@ -136,6 +130,7 @@ b2Vec2 Camera::ConvertScreenToWorld(const b2Vec2& ps)
 	b2Vec2 pw;
 	pw.x = (1.0f - u) * lower.x + u * upper.x;
 	pw.y = (1.0f - v) * lower.y + v * upper.y;
+	printf("screen to world: (%f, %f)\n", ps.x, ps.y);
 	return pw;
 }
 
@@ -144,9 +139,7 @@ b2Vec2 Camera::ConvertWorldToScreen(const b2Vec2& pw)
 {
 	float32 w = float32(m_width);
 	float32 h = float32(m_height);
-	float32 ratio = w / h;
-	b2Vec2 extents(ratio * 25.0f, 25.0f);
-	extents *= m_zoom;
+	b2Vec2 extents(w, h);
 
 	b2Vec2 lower = m_center - extents;
 	b2Vec2 upper = m_center + extents;
@@ -157,6 +150,8 @@ b2Vec2 Camera::ConvertWorldToScreen(const b2Vec2& pw)
 	b2Vec2 ps;
 	ps.x = u * w;
 	ps.y = (1.0f - v) * h;
+
+	printf("World to screen: (%f, %f)\n", ps.x, ps.y);
 	return ps;
 }
 
@@ -166,9 +161,7 @@ void Camera::BuildProjectionMatrix(float32* m, float32 zBias)
 {
 	float32 w = float32(m_width);
 	float32 h = float32(m_height);
-	float32 ratio = w / h;
-	b2Vec2 extents(ratio * 25.0f, 25.0f);
-	extents *= m_zoom;
+	b2Vec2 extents(w, h);
 
 	b2Vec2 lower = m_center - extents;
 	b2Vec2 upper = m_center + extents;
@@ -190,7 +183,8 @@ void Camera::BuildProjectionMatrix(float32* m, float32 zBias)
 
 	m[12] = -(upper.x + lower.x) / (upper.x - lower.x);
 	m[13] = -(upper.y + lower.y) / (upper.y - lower.y);
-	m[14] = zBias;
+	//m[14] = zBias;
+	m[14] = 0.0f;
 	m[15] = 1.0f;
 }
 

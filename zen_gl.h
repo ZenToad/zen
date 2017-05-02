@@ -73,7 +73,7 @@ typedef struct ZGLShader {
 	char base_name[64];
 } ZGLShader;
 
-
+// TODO: this should be in the math library
 typedef union ZGLColor {
 	uint32    rgba; // NOTE(tim): 0xaabbggrr in little endian
 	struct { uint8 r, g, b, a; };
@@ -81,6 +81,7 @@ typedef union ZGLColor {
 } ZGLColor;
 
 
+// TODO: this should be in the math library
 typedef struct ZGLBasicVertex {
 	float x, y;
 	float u, v;
@@ -138,6 +139,7 @@ typedef struct ZGLBasicState {
 #endif
 
 
+// TODO: fix the nameing of stuff
 ZGLDEF void zgl_bs_initialize(ZGLBasicState *bs);
 ZGLDEF void zgl_bs_begin(ZGLBasicState *bs, float window_width, float window_height);
 ZGLDEF void zgl_bs_end(ZGLBasicState *bs);
