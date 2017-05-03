@@ -24,9 +24,17 @@ extern "C" {
 ZGLEZDEF void zglez_init();
 ZGLEZDEF void zglez_quit();
 ZGLEZDEF void zglez_flush();
+ZGLEZDEF void zglez_projection(float m[16]);
 
-ZGLEZDEF void zglez_render_point(Vector2_t v, Colorf_t c, float pt_size);
-ZGLEZDEF void zglez_render_line(Vector2_t v0, Colorf_t c0, Vector2_t v1, Colorf_t c1);
+ZGLEZDEF void zglez_point(Vector3_t v, Colorf_t c, float pt_size);
+ZGLEZDEF void zglez_line(Vector3_t v0, Colorf_t c0, Vector3_t v1, Colorf_t c1);
+
+// TODO
+// polygons
+// filled polygons
+// circles
+// filled circles
+// textures
 
 
 #if defined(__cplusplus)
@@ -40,7 +48,7 @@ ZGLEZDEF void zglez_render_line(Vector2_t v0, Colorf_t c0, Vector2_t v1, Colorf_
 #if defined(ZEN_GLEZ_IMPLEMENTATION)
 
 
-#define SAFEGL_CHECK_ERROR() do { \
+#define ZGLEZ_CHECK_ERROR() do { \
 	GLenum error_code = glGetError(); \
 	if (error_code != GL_NO_ERROR) { \
 		GB_PANIC("OpenGL error = %d\n", error_code); \
@@ -48,10 +56,10 @@ ZGLEZDEF void zglez_render_line(Vector2_t v0, Colorf_t c0, Vector2_t v1, Colorf_
 } while (0)
 
 
-typedef struct zglez_render_points {
+typedef struct zglez_points {
  
 	enum { max_vertices = 512 };
-	Vector2_t vertices[max_vertices];
+	Vector3_t vertices[max_vertices];
 	Colorf_t colors[max_vertices];
 	float sizes[max_vertices];
  
@@ -67,14 +75,14 @@ typedef struct zglez_render_points {
 	GLint color_attribute;
 	GLint size_attribute;
 
-} zglez_render_points;
-zglez_render_points *__zenglez_rpts;
+} zglez_points;
+static zglez_points *g_zglez_points = 0;
 
 
-typedef struct zglez_render_lines {
+typedef struct zglez_lines {
  
 	enum { max_vertices = 512 * 2 };
-	Vector2_t vertices[max_vertices];
+	Vector3_t vertices[max_vertices];
 	Colorf_t colors[max_vertices];
  
 	Matrix4x4_t projection;
@@ -88,8 +96,8 @@ typedef struct zglez_render_lines {
 	GLint vertex_attribute;
 	GLint color_attribute;
 
-} zglez_render_lines;
-zglez_render_lines *__zenglez_rlines;
+} zglez_lines;
+static zglez_lines *g_zglez_lines = 0;
 
 
 static void zglez_print_log(GLuint object) {
@@ -159,23 +167,23 @@ static GLuint zglez_create_shader_program(const char* vs, const char* fs) {
 }
 
 
-static void zglez_create_render_points() {
+static void zgles_create_points() {
 
-	__zenglez_rpts = (zglez_render_points *)calloc(1, zen_sizeof(zglez_render_points));
-	GB_ASSERT_NOT_NULL(__zenglez_rpts);
-	zglez_render_points *rpts = __zenglez_rpts;
+	g_zglez_points = (zglez_points *)calloc(1, zen_sizeof(zglez_points));
+	GB_ASSERT_NOT_NULL(g_zglez_points);
+	zglez_points *points = g_zglez_points;
 
 	const char* vs = \
 		"#version 440\n"
 		"uniform mat4 projectionMatrix;\n"
-		"layout(location = 0) in vec2 v_position;\n"
+		"layout(location = 0) in vec3 v_position;\n"
 		"layout(location = 1) in vec4 v_color;\n"
 		"layout(location = 2) in float v_size;\n"
 		"out vec4 f_color;\n"
 		"void main(void)\n"
 		"{\n"
 		"	f_color = v_color;\n"
-		"	gl_Position = projectionMatrix * vec4(v_position, 0.0f, 1.0f);\n"
+		"	gl_Position = projectionMatrix * vec4(v_position, 1.0f);\n"
 		"   gl_PointSize = v_size;\n"
 		"}\n";
 
@@ -188,131 +196,132 @@ static void zglez_create_render_points() {
 		"	color = f_color;\n"
 		"}\n";
 
-	rpts->projection = Matrix4x4();
+	points->projection = Matrix4x4();
 
-	rpts->program_id = zglez_create_shader_program(vs, fs);
-	rpts->projection_uniform = glGetUniformLocation(rpts->program_id, "projectionMatrix");
-	rpts->vertex_attribute = 0;
-	rpts->color_attribute = 1;
-	rpts->size_attribute = 2;
+	points->program_id = zglez_create_shader_program(vs, fs);
+	points->projection_uniform = glGetUniformLocation(points->program_id, "projectionMatrix");
+	points->vertex_attribute = 0;
+	points->color_attribute = 1;
+	points->size_attribute = 2;
 
 	// Generate
-	glGenVertexArrays(1, &rpts->vao_id);
-	glGenBuffers(3, rpts->vbo_ids);
+	glGenVertexArrays(1, &points->vao_id);
+	glGenBuffers(3, points->vbo_ids);
 
-	glBindVertexArray(rpts->vao_id);
-	glEnableVertexAttribArray(rpts->vertex_attribute);
-	glEnableVertexAttribArray(rpts->color_attribute);
-	glEnableVertexAttribArray(rpts->size_attribute);
+	glBindVertexArray(points->vao_id);
+	glEnableVertexAttribArray(points->vertex_attribute);
+	glEnableVertexAttribArray(points->color_attribute);
+	glEnableVertexAttribArray(points->size_attribute);
 
 	// Vertex buffer
-	glBindBuffer(GL_ARRAY_BUFFER, rpts->vbo_ids[0]);
-	glVertexAttribPointer(rpts->vertex_attribute, 2, GL_FLOAT, GL_FALSE, 0, zen_offset(0));
-	glBufferData(GL_ARRAY_BUFFER, sizeof(rpts->vertices), rpts->vertices, GL_DYNAMIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, points->vbo_ids[0]);
+	glVertexAttribPointer(points->vertex_attribute, 3, GL_FLOAT, GL_FALSE, 0, zen_offset(0));
+	glBufferData(GL_ARRAY_BUFFER, sizeof(points->vertices), points->vertices, GL_DYNAMIC_DRAW);
 
-	glBindBuffer(GL_ARRAY_BUFFER, rpts->vbo_ids[1]);
-	glVertexAttribPointer(rpts->color_attribute, 4, GL_FLOAT, GL_FALSE, 0, zen_offset(0));
-	glBufferData(GL_ARRAY_BUFFER, sizeof(rpts->colors), rpts->colors, GL_DYNAMIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, points->vbo_ids[1]);
+	glVertexAttribPointer(points->color_attribute, 4, GL_FLOAT, GL_FALSE, 0, zen_offset(0));
+	glBufferData(GL_ARRAY_BUFFER, sizeof(points->colors), points->colors, GL_DYNAMIC_DRAW);
 
-	glBindBuffer(GL_ARRAY_BUFFER, rpts->vbo_ids[2]);
-	glVertexAttribPointer(rpts->size_attribute, 1, GL_FLOAT, GL_FALSE, 0, zen_offset(0));
-	glBufferData(GL_ARRAY_BUFFER, sizeof(rpts->sizes), rpts->sizes, GL_DYNAMIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, points->vbo_ids[2]);
+	glVertexAttribPointer(points->size_attribute, 1, GL_FLOAT, GL_FALSE, 0, zen_offset(0));
+	glBufferData(GL_ARRAY_BUFFER, sizeof(points->sizes), points->sizes, GL_DYNAMIC_DRAW);
 
-	SAFEGL_CHECK_ERROR();
+	ZGLEZ_CHECK_ERROR();
 
 	// Cleanup
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 
-	rpts->count = 0;
+	points->count = 0;
 	
 }	
 
 
-static void zglez_flush_render_points() {
+static void zglez_flush_points() {
 
-	zglez_render_points *rpts = __zenglez_rpts;
-	if (rpts->count == 0)
+	zglez_points *points = g_zglez_points;
+	if (points->count == 0)
 		return;
 
-	glUseProgram(rpts->program_id);
+	glUseProgram(points->program_id);
 
-	glUniformMatrix4fv(rpts->projection_uniform, 1, GL_FALSE, rpts->projection.m);
+	glUniformMatrix4fv(points->projection_uniform, 1, GL_FALSE, points->projection.m);
 
-	glBindVertexArray(rpts->vao_id);
+	glBindVertexArray(points->vao_id);
 
-	glBindBuffer(GL_ARRAY_BUFFER, rpts->vbo_ids[0]);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, rpts->count * sizeof(Vector2_t), rpts->vertices);
+	glBindBuffer(GL_ARRAY_BUFFER, points->vbo_ids[0]);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, points->count * sizeof(Vector3_t), points->vertices);
 
-	glBindBuffer(GL_ARRAY_BUFFER, rpts->vbo_ids[1]);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, rpts->count * sizeof(Color_t), rpts->colors);
+	glBindBuffer(GL_ARRAY_BUFFER, points->vbo_ids[1]);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, points->count * sizeof(Colorf_t), points->colors);
 
-	glBindBuffer(GL_ARRAY_BUFFER, rpts->vbo_ids[2]);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, rpts->count * sizeof(float), rpts->sizes);
+	glBindBuffer(GL_ARRAY_BUFFER, points->vbo_ids[2]);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, points->count * sizeof(float), points->sizes);
 
 	glEnable(GL_PROGRAM_POINT_SIZE);
-	glDrawArrays(GL_POINTS, 0, rpts->count);
+	glDrawArrays(GL_POINTS, 0, points->count);
 	glDisable(GL_PROGRAM_POINT_SIZE);
 
-	SAFEGL_CHECK_ERROR();
+	ZGLEZ_CHECK_ERROR();
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 	glUseProgram(0);
 
-	rpts->count = 0;
+	points->count = 0;
 }
 
 
-static void zglez_add_render_point(zglez_render_points *rpts, const Vector2_t v, const Colorf_t c, float size) {
+static void zglez_point_vertex(const Vector3_t v, const Colorf_t c, float size) {
 
-	if (rpts->count == rpts->max_vertices)
-		zglez_flush_render_points();
+	zglez_points *points = g_zglez_points;
+	if (points->count == points->max_vertices)
+		zglez_flush_points();
 
-	rpts->vertices[rpts->count] = v;
-	rpts->colors[rpts->count] = c;
-	rpts->sizes[rpts->count] = size;
-	++rpts->count;
+	points->vertices[points->count] = v;
+	points->colors[points->count] = c;
+	points->sizes[points->count] = size;
+	++points->count;
 
 }
 
 
-static void zglez_destroy_render_points() {
+static void zglez_destroy_points() {
 
-	zglez_render_points *rpts = __zenglez_rpts;
-	if (rpts == NULL)
+	zglez_points *points = g_zglez_points;
+	if (points == NULL)
 		return;
 
-	if (rpts->vao_id) {
-		glDeleteVertexArrays(1, &rpts->vao_id);
-		glDeleteBuffers(3, rpts->vbo_ids);
+	if (points->vao_id) {
+		glDeleteVertexArrays(1, &points->vao_id);
+		glDeleteBuffers(3, points->vbo_ids);
 	}
 
-	if (rpts->program_id) {
-		glDeleteProgram(rpts->program_id);
+	if (points->program_id) {
+		glDeleteProgram(points->program_id);
 	}
 
-	free(rpts);
+	free(points);
 
 }
 
 
-static void zglez_create_render_lines() {
+static void zglez_create_lines() {
 
-	__zenglez_rlines = (zglez_render_lines *)calloc(1, zen_sizeof(zglez_render_lines));
-	GB_ASSERT_NOT_NULL(__zenglez_rlines);
-	zglez_render_lines *rlines = __zenglez_rlines;
+	g_zglez_lines = (zglez_lines *)calloc(1, zen_sizeof(zglez_lines));
+	GB_ASSERT_NOT_NULL(g_zglez_lines);
+	zglez_lines *lines = g_zglez_lines;
 
 	const char* vs = \
 		"#version 440\n"
 		"uniform mat4 projectionMatrix;\n"
-		"layout(location = 0) in vec2 v_position;\n"
+		"layout(location = 0) in vec3 v_position;\n"
 		"layout(location = 1) in vec4 v_color;\n"
 		"out vec4 f_color;\n"
 		"void main(void)\n"
 		"{\n"
 		"	f_color = v_color;\n"
-		"	gl_Position = projectionMatrix * vec4(v_position, 0.0f, 1.0f);\n"
+		"	gl_Position = projectionMatrix * vec4(v_position, 1.0f);\n"
 		"}\n";
 
 	const char* fs = \
@@ -324,161 +333,153 @@ static void zglez_create_render_lines() {
 		"	color = f_color;\n"
 		"}\n";
 
-	rlines->projection = Matrix4x4();
+	lines->projection = Matrix4x4();
 
-	rlines->program_id = zglez_create_shader_program(vs, fs);
-	rlines->projection_uniform = glGetUniformLocation(rlines->program_id, "projectionMatrix");
-	rlines->vertex_attribute = 0;
-	rlines->color_attribute = 1;
+	lines->program_id = zglez_create_shader_program(vs, fs);
+	lines->projection_uniform = glGetUniformLocation(lines->program_id, "projectionMatrix");
+	lines->vertex_attribute = 0;
+	lines->color_attribute = 1;
 
 	// Generate
-	glGenVertexArrays(1, &rlines->vao_id);
-	glGenBuffers(2, rlines->vbo_ids);
+	glGenVertexArrays(1, &lines->vao_id);
+	glGenBuffers(2, lines->vbo_ids);
 
-	glBindVertexArray(rlines->vao_id);
-	glEnableVertexAttribArray(rlines->vertex_attribute);
-	glEnableVertexAttribArray(rlines->color_attribute);
+	glBindVertexArray(lines->vao_id);
+	glEnableVertexAttribArray(lines->vertex_attribute);
+	glEnableVertexAttribArray(lines->color_attribute);
 
 	// Vertex buffer
-	glBindBuffer(GL_ARRAY_BUFFER, rlines->vbo_ids[0]);
-	glVertexAttribPointer(rlines->vertex_attribute, 2, GL_FLOAT, GL_FALSE, 0, zen_offset(0));
-	glBufferData(GL_ARRAY_BUFFER, sizeof(rlines->vertices), rlines->vertices, GL_DYNAMIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, lines->vbo_ids[0]);
+	glVertexAttribPointer(lines->vertex_attribute, 3, GL_FLOAT, GL_FALSE, 0, zen_offset(0));
+	glBufferData(GL_ARRAY_BUFFER, sizeof(lines->vertices), lines->vertices, GL_DYNAMIC_DRAW);
 
-	glBindBuffer(GL_ARRAY_BUFFER, rlines->vbo_ids[1]);
-	glVertexAttribPointer(rlines->color_attribute, 4, GL_FLOAT, GL_FALSE, 0, zen_offset(0));
-	glBufferData(GL_ARRAY_BUFFER, sizeof(rlines->colors), rlines->colors, GL_DYNAMIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, lines->vbo_ids[1]);
+	glVertexAttribPointer(lines->color_attribute, 4, GL_FLOAT, GL_FALSE, 0, zen_offset(0));
+	glBufferData(GL_ARRAY_BUFFER, sizeof(lines->colors), lines->colors, GL_DYNAMIC_DRAW);
 
-	SAFEGL_CHECK_ERROR();
+	ZGLEZ_CHECK_ERROR();
 
 	// Cleanup
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 
-	rlines->count = 0;
+	lines->count = 0;
 	
 }	
 
 
-static void zglez_flush_render_lines() {
+static void zglez_flush_lines() {
 
-	zglez_render_lines *rlines = __zenglez_rlines;
-	if (rlines->count == 0)
+	zglez_lines *lines = g_zglez_lines;
+	if (lines->count == 0)
 		return;
 
-	glUseProgram(rlines->program_id);
+	glUseProgram(lines->program_id);
 
-	glUniformMatrix4fv(rlines->projection_uniform, 1, GL_FALSE, rlines->projection.m);
+	glUniformMatrix4fv(lines->projection_uniform, 1, GL_FALSE, lines->projection.m);
 
-	glBindVertexArray(rlines->vao_id);
+	glBindVertexArray(lines->vao_id);
 
-	glBindBuffer(GL_ARRAY_BUFFER, rlines->vbo_ids[0]);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, rlines->count * sizeof(Vector2_t), rlines->vertices);
+	glBindBuffer(GL_ARRAY_BUFFER, lines->vbo_ids[0]);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, lines->count * sizeof(Vector3_t), lines->vertices);
 
-	glBindBuffer(GL_ARRAY_BUFFER, rlines->vbo_ids[1]);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, rlines->count * sizeof(Color_t), rlines->colors);
+	glBindBuffer(GL_ARRAY_BUFFER, lines->vbo_ids[1]);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, lines->count * sizeof(Colorf_t), lines->colors);
 
-	glDrawArrays(GL_LINES, 0, rlines->count);
+	glDrawArrays(GL_LINES, 0, lines->count);
 
-	SAFEGL_CHECK_ERROR();
+	ZGLEZ_CHECK_ERROR();
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 	glUseProgram(0);
 
-	rlines->count = 0;
+	lines->count = 0;
 
 }
 
 
-static void zglez_add_render_line(zglez_render_lines *rlines, const Vector2_t v0, const Colorf_t c0, Vector2_t v1, Colorf_t c1) {
+static void zglez_line_vertex(const Vector3_t v, const Colorf_t c) {
 
-	if (rlines->count + 2 >= rlines->max_vertices)
-		zglez_flush_render_lines();
+	zglez_lines *lines = g_zglez_lines;
+	if (lines->count >= lines->max_vertices)
+		zglez_flush_lines();
 
-	rlines->vertices[rlines->count] = v0;
-	rlines->colors[rlines->count] = c0;
-	++rlines->count;
-
-	rlines->vertices[rlines->count] = v1;
-	rlines->colors[rlines->count] = c1;
-	++rlines->count;
+	lines->vertices[lines->count] = v;
+	lines->colors[lines->count] = c;
+	++lines->count;
 
 }
 
 
-static void zglez_destroy_render_lines() {
+static void zglez_destroy_lines() {
 
-	zglez_render_lines *rlines = __zenglez_rlines;
-	if (rlines == NULL)
+	zglez_lines *lines = g_zglez_lines;
+	if (lines == NULL)
 		return;
 
-	if (rlines->vao_id) {
-		glDeleteVertexArrays(1, &rlines->vao_id);
-		glDeleteBuffers(2, rlines->vbo_ids);
+	if (lines->vao_id) {
+		glDeleteVertexArrays(1, &lines->vao_id);
+		glDeleteBuffers(2, lines->vbo_ids);
 	}
 
-	if (rlines->program_id) {
-		glDeleteProgram(rlines->program_id);
+	if (lines->program_id) {
+		glDeleteProgram(lines->program_id);
 	}
 
-	free(rlines);
+	free(lines);
 
 }
 
 
-ZGLEZDEF void zglez_render_point(Vector2_t v, Colorf_t c, float pt_size) {
-	zglez_add_render_point(__zenglez_rpts, v, c, pt_size);
+ZGLEZDEF void zglez_point(Vector3_t v, Colorf_t c, float pt_size) {
+	zglez_point_vertex(v, c, pt_size);
 }
 
 
-ZGLEZDEF void zglez_render_line(Vector2_t v0, Colorf_t c0, Vector2_t v1, Colorf_t c1) {
-	zglez_add_render_line(__zenglez_rlines, v0, c0, v1, c1);
+ZGLEZDEF void zglez_line(Vector3_t v0, Colorf_t c0, Vector3_t v1, Colorf_t c1) {
+	zglez_line_vertex(v0, c0);
+	zglez_line_vertex(v1, c1);
 }
 
 
 ZGLEZDEF void zglez_init() {
 
-	zglez_create_render_points();
-	zglez_create_render_lines();
+	zgles_create_points();
+	zglez_create_lines();
 
 }
 
+ZGLEZDEF void zglez_projection(Matrix4x4_t mat) {
+
+	g_zglez_lines->projection = mat;
+	g_zglez_points->projection = mat;
+
+}
 
 ZGLEZDEF void zglez_flush() {
 
-	zglez_flush_render_points();
-	zglez_flush_render_lines();
+	zglez_flush_points();
+	zglez_flush_lines();
 
 }
 
 
 ZGLEZDEF void zglez_quit() {
 
-	zglez_destroy_render_points();
-	zglez_destroy_render_lines();
+	zglez_destroy_points();
+	zglez_destroy_lines();
 
 }
 
 
-//void zgl_render_line(Vector2_t *a, Vector2_t *b, Colorf c) {
-
-//}
-
-//void zgl_render_polygon(Vector2_t *v, int count, Colorf_t c) {
-	//Vector2_t *S = v[count - 1];
+//void zgl_render_polygon(Vector3_t *v, int count, Colorf_t c) {
+	//Vector3_t *S = v[count - 1];
 	//for (int i = 0; i < count; ++i) {
-		//Vector2_t *P = v[i];
+		//Vector3_t *P = v[i];
 		//zgl_render_line(S, P, c);
 		//S = P;
 	//}
-//}
-
-//void zgl_flush() {
-	//zgl_flush_render_points(__zgl_render_points);
-	//zgl_flush_render_lines(__zgl_render_lines);
-	//zgl_flush_render_polygons(__zgl_render_polygons);
-
-	//// textures...
 //}
 
 #endif
