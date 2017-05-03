@@ -218,7 +218,7 @@ static char zgl_err_buf[1024];
 
  
 int32 const zglInternalTextureFormat_8[4]  = { GL_R8,   GL_RG8,   GL_RGB8,	  GL_RGBA8   };
-
+int32 const zglTextureFormat[4] = { GL_RED, GL_RG, GL_RGB, GL_RGBA };
 
 static ZGLShaderError zgl_create_shader(ZGLShader *shader, const char* vertex_shader, const char* fragment_shader) {
 
@@ -461,11 +461,7 @@ b32 zgl_load_texture2d_from_memory(ZGLTexture *tex, void const *data, int32 widt
 	assert(GL_MAX_TEXTURE_SIZE > width);
 	assert(GL_MAX_TEXTURE_SIZE > height);
 
-	glTexImage2D(GL_TEXTURE_2D, 0,
-					 zglInternalTextureFormat_8[channel_count-1],
-	             width, height, 0,
-	             4,
-	             GL_UNSIGNED_BYTE, data);
+	glTexImage2D(GL_TEXTURE_2D, 0, zglInternalTextureFormat_8[channel_count-1], width, height, 0, zglTextureFormat[channel_count-1], GL_UNSIGNED_BYTE, data);
 
    glGenerateMipmap(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, 0);
