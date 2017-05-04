@@ -14,3 +14,197 @@ TODO
   more usefull without taking away from the C part?
 
 
+audio Guy Somberg
+--------------------------------------
+
+Output = A + B
+
+Output = sum of all sounds
+
+Embarrassingly Vectorizable
+	Just use SSMD, and it's basically free (Very cheap)
+
+The audio mix is the hard part!  How you combine the sounds that are playing.
+
+An easy way to deal with this is to lower the volume:
+
+* Gain reduction
+* Sound Cones
+* 3D distance attenuation
+* Ducking
+
+Mix States/Sound Moods/Mixer Snapshots
+
+A big chucnk of audio technology revolves around not playing sounds.
+* max playbacks
+* Stream limits
+* Virtualized sound sorces
+
+
+Walter Murch
+Rule of two and a half
+One person, sync footsteps,
+Two people, sync
+Two and 1/2 - Nothing in sync, just a bunch of footsteps
+
+
+Audio Mix
+* Let the most important sounds shine
+
+
+dB = Decibels
+* 1/10 of a Bel
+* What is a Bel?  Doesn't matter
+
+* Most important fact: 6dB = Double
+	-6dB == 1/2 volume
+	-12dB == 1/4 volume
+	+18dB == 8x volume
+
+
+Important source code!!!
+
+float dBToVolume(float dB) {
+	return powf(10.0f, 0.05f * dB);
+}
+
+float VolumeTodB(float volume) {
+	return 20.0f * log10f(volume);
+}
+
+
+
+// Bootstrap an aduio engine
+zen_audio.h
+
+class AudioEngine {
+
+public:
+
+	static void Init();
+	static void Update();
+	static void Shutdown();
+
+	void loadSound(string soundName, bool b3d=true, bool bLooping=false, bool bStream=false);
+	void unloadSound(string soundName);
+	void set3dListenerAndOrientation(Vec3 position, Vec3 look, Vec3 up);
+	void playSound(string soundName, Vec3 pos={0,0,0}, float volumedB = 0.0f);
+	void stopChannel(int channelId);
+	void stopAllChannels();
+	void setChannel3dPosition(int channelId, Vec3 position);
+	void setChannelVolume(int channelId, float volumedB);
+	bool isPlaying(int channelId);
+
+};
+
+
+struct Implementation {
+
+	Implementation();
+	~Implementation();
+
+	void update();
+
+	FMOD::System *system;
+
+	int nextChannelId;
+
+	typedef map<string, FMOD::Sound *> SoundMap;
+	typedef map<int, FMOD::Channel *> ChannelMap;
+
+	SoundMap sounds;
+	ChannelMap channels;
+
+};
+
+
+void Implementation::update() {
+	vector<ChannelMap::iterator> stoppedChannels;
+
+	for(auto it = channels.begin(), itEnd = channels.end(); it != itEnd; ++it) {
+		bool isPlaying = false;
+		it->second->isPlaying(&isPlaying);
+		if(!isPlaying) {
+			stoppedChannels.push_back(it);
+		}
+	}
+
+	for(auto &it : stoppedChannels) {
+		channels.erase(it);
+	}
+
+	system->Update();
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+
+Implementation *impl = NULL;
+
+void AudioEngine::Init() {
+	impl = new Implementation;
+}
+
+void AudioEngine::Update() {
+	impl->update();
+}
+
+void AudioEngine::Shutdown() {
+	delete impl;
+}
+
+void AudioEngine::loadSound(string name, bool b3d, bool looping, bool stream) {
+
+	auto foundIt = impl->sounds.find(name);
+	if (foundIt != impl->sounds.end()) {
+		// already loaded
+		return;
+	}
+
+	FMOD_MODE mode = FMOD_DEFAULT;
+	mode |= b3d ? FMOD_3D : FMOD_2D;
+	mode |= looping ? FMOD_LOOP_NORMAL : FMOD_LOOP_OFF;
+	mode |= stream ? FMOD_CREATESTREAM : FMOD_CREATECOMPRESSEDSAMPLE;
+	FMOD::Sound *sound = NULL;
+	impl->system->createSound(name, mode, NULL, &sound);
+
+	if (sound) {
+		impl->sounds[name] = sound;
+	}
+}
+
+void AudioEngine::unloadSound(string name) {
+
+	auto foundIt = impl->sounds.find(name);
+	if (foundIt == impl->sounds.end())
+		return; // not loaded
+
+	foundIt->second->release();
+	impl->sounds.erase(foundIt);
+
+}
+
+int AudioEngine::playSound(string name, Vec3 position, float volumedB) {
+
+	int channelId = impl->nextChannelId++;
+	auto foundIt = impl->sounds.find(name);
+	if (foundIt == impl->sounds.end()) {
+		loadSound(name);
+		foundIt = impl->sound.find(name);
+		if (foundIt == impl->sounds.end())
+			return channelId; // Important
+	}
+
+	FMOD::Channel *channel = NULL;
+	impl->system->playSound(FMOD_CHAMMEL_FREE, foundIt->second, true,
+&channel); // true here to not play sound - could pop
+	if (channel) {
+		FMOD_VECTOR pos = VectorToFmod(position);
+		channel->set3DAttributes(&pos, NULL);
+		channel->setVolume(dBToVolume(volumedB));
+		channel->setPaused(false); // now we unpause
+		impl->channels[channelId] = channel;
+	}
+	return channelId;
+}
+
