@@ -1,3 +1,49 @@
+this isn't working atm...
+void lets_try_hashmap() {
+
+	Hashmap *map = Hashmap_create(NULL, NULL);
+
+	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
+	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
+	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
+	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
+	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
+	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
+	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
+	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
+	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
+	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
+	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
+	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
+
+	//zout("key1: %s", Hashmap_get(map, "key1"));
+	//zout("key3: %s", Hashmap_get(map, "key3"));
+
+
+	//char k[2] = {0};
+	//char v[2] = {0};
+	//for (int i = 0; i < 1024 * 1024; ++i) {
+		//gbString key = gb_make_string(0);
+		//gbString value = gb_make_string(0);
+		//int n = 3; //rand() % 8 + 1;
+		//int min = 33, max = 7;
+		//for (int j = 0; j < n; ++j) {
+			//k[0] = (rand() % max) + min;
+			//v[0] = (rand() % max) + min;
+			//key = gb_append_cstring(key, k);
+			//value = gb_append_cstring(value, v);
+		//}
+		//Hashmap_set(map, key, value);
+		////zout("key: %s, value: %s", key, value);
+	//}
+
+	zout("\nprint the map...\n");
+	Hashmap_traverse(map, print_map);
+
+	Hashmap_destroy(map);
+
+}
+
 --------------------------------------------------------------------------------
 TODO
 --------------------------------------------------------------------------------
