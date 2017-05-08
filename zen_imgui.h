@@ -42,6 +42,10 @@ typedef struct ZenImguiState_t {
 
 static ZenImguiState_t __zen_imgui_state = {0};
 
+static ImFont* __zen_imgui_default_font;
+static ImFont* __zen_imgui_custion_font;
+
+
 ZIMGUIDEF void zen_imgui_begin(ZGLFW *glfw) {
 
 	ImGuiIO& io = ImGui::GetIO();
@@ -109,6 +113,9 @@ static void zen_imgui_create_font() {
 	// Load as RGBA 32-bits (75% of the memory is wasted, but default font is so small) because it is more likely 
 	// to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept 
 	// than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
+	__zen_imgui_default_font = io.Fonts->AddFontDefault();
+	__zen_imgui_custion_font = io.Fonts->AddFontFromFileTTF("res/PressStart2P.ttf", 16);
+
 	io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   
 
 	// Upload texture to graphics system

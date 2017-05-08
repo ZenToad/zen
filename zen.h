@@ -360,7 +360,7 @@ void Hashmap_destroy(Hashmap * map) {
 			zout("bucket %d, count %d", i, sb_count(bucket));
 			for (int j = 0; j < sb_count(bucket); ++j) {
 				HashmapNode *node = bucket[j];
-				zout("*node = 0x%lx", (uint64_t)node);
+				zout("*node = 0x%zx", (size_t)node);
 				GB_ASSERT_NOT_NULL(node);
 				free(node);
 			}
@@ -452,12 +452,12 @@ gbString Hashmap_delete(Hashmap *map, const gbString key) {
 }
 
 
-int Hashmap_set(Hashmap *map, gbString key, gbString data) {
+void Hashmap_set(Hashmap *map, gbString key, gbString data) {
 
 	if (Hashmap_get(map, key)) {
 		zout("Already have a %s key...", key);
 		Hashmap_delete(map, key);
-		zout("deleting %s key");
+		zout("deleting %s key", key);
 		GB_ASSERT_MSG(Hashmap_get(map, key) == NULL, "Key %s should be gone!!!", key);
 	
 	}
