@@ -26,6 +26,7 @@ extern "C" {
 #include <stdio.h>
 #endif
   
+
 #if !defined(int32_t)
 #include <stdint.h>
 typedef int8_t int8;
@@ -47,10 +48,8 @@ typedef size_t    usize;
 typedef ptrdiff_t isize;
 typedef intptr_t  psize;
 
-// NOTE(tim): Easier to search for
-#define cast(Type) (Type)
 
-// NOTE(tim): Because a signed sizeof is more useful
+#define cast(Type) (Type)
 #define zen_sizeof(x) cast(isize)(sizeof(x))
 
 
@@ -99,6 +98,7 @@ typedef intptr_t  psize;
 		#define zen_inline __attribute__ ((__always_inline__)) inline
 	#endif
 #endif
+
 
 
 ////////////////////////////////////////////////////////////////
@@ -154,216 +154,6 @@ ZENHDEF void gb_assert_handler(char const *condition, char const *file, int line
 
 //////////////////////////////////////////////////////////////////////////////
 //
-//                                stb_arr
-//
-//  An stb_arr is directly useable as a pointer (use the actual type in your
-//  definition), but when it resizes, it returns a new pointer and you can't
-//  use the old one, so you have to be careful to copy-in-out as necessary.
-//
-//  Use a NULL pointer as a 0-length array.
-//
-//     float *my_array = NULL, *temp;
-//
-//     // add elements on the end one at a time
-//     stb_arr_push(my_array, 0.0f);
-//     stb_arr_push(my_array, 1.0f);
-//     stb_arr_push(my_array, 2.0f);
-//
-//     assert(my_array[1] == 2.0f);
-//
-//     // add an uninitialized element at the end, then assign it
-//     *stb_arr_add(my_array) = 3.0f;
-//
-//     // add three uninitialized elements at the end
-//     temp = stb_arr_addn(my_array,3);
-//     temp[0] = 4.0f;
-//     temp[1] = 5.0f;
-//     temp[2] = 6.0f;
-//
-//     assert(my_array[5] == 5.0f);
-//
-//     // remove the last one
-//     stb_arr_pop(my_array);
-//
-//     assert(stb_arr_len(my_array) == 6);
-
-
-// simple functions written on top of other functions
-//
-ZENHDEF void stb_swap(void *p, void *q, size_t sz);
-
-#define stb_arr_empty(a)       (  stb_arr_len(a) == 0 )
-#define stb_arr_add(a)         (  stb_arr_addn((a),1) )
-#define stb_arr_push(a,v)      ( *stb_arr_add(a)=(v)  )
-
-
-typedef struct {
-   int len, limit;
-   unsigned int signature;
-} stb__arr;
-
-
-#define stb_arr_signature      0x51bada7b  // ends with 0123 in decimal
-
-
-// access the header block stored before the data
-#define stb_arrhead(a)         /*lint --e(826)*/ (((stb__arr *) (psize)(a)) - 1)
-#define stb_arrhead2(a)        /*lint --e(826)*/ (((stb__arr *) (psize)(a)) - 1)
-
-
-#ifdef STB_DEBUG
-#define stb_arr_check(a)       assert(!a || stb_arrhead(a)->signature == stb_arr_signature)
-#define stb_arr_check2(a)      assert(!a || stb_arrhead2(a)->signature == stb_arr_signature)
-#else
-#define stb_arr_check(a)       ((void) 0)
-#define stb_arr_check2(a)      ((void) 0)
-#endif
-
-
-// ARRAY LENGTH
-
-// get the array length; special case if pointer is NULL
-#define stb_arr_len(a)         (a ? stb_arrhead(a)->len : 0)
-#define stb_arr_len2(a)        ((stb__arr *) (a) ? stb_arrhead2(a)->len : 0)
-#define stb_arr_lastn(a)       (stb_arr_len(a)-1)
-
-// check whether a given index is valid -- tests 0 <= i < stb_arr_len(a) 
-#define stb_arr_valid(a,i)     (a ? (int) (i) < stb_arrhead(a)->len : 0)
-
-// change the array length so is is exactly N entries long, creating
-// uninitialized entries as needed
-#define stb_arr_setlen(a,n)  \
-            (stb__arr_setlen((void **) &(a), sizeof(a[0]), (n)))
-
-// change the array length so that N is a valid index (that is, so
-// it is at least N entries long), creating uninitialized entries as needed
-#define stb_arr_makevalid(a,n)  \
-            (stb_arr_len(a) < (n)+1 ? stb_arr_setlen(a,(n)+1),(a) : (a))
-
-// remove the last element of the array, returning it
-#define stb_arr_pop(a)         ((stb_arr_check(a), (a))[--stb_arrhead(a)->len])
-
-// access the last element in the array
-#define stb_arr_last(a)        ((stb_arr_check(a), (a))[stb_arr_len(a)-1])
-
-// is iterator at end of list?
-#define stb_arr_end(a,i)       ((i) >= &(a)[stb_arr_len(a)])
-
-// (internal) change the allocated length of the array
-#define stb_arr__grow(a,n)     (stb_arr_check(a), stb_arrhead(a)->len += (n))
-
-// add N new unitialized elements to the end of the array
-#define stb_arr__addn(a,n)     /*lint --e(826)*/ \
-                               ((stb_arr_len(a)+(n) > stb_arrcurmax(a))      \
-                                 ? (stb__arr_addlen((void **) &(a),sizeof(*a),(n)),0) \
-                                 : ((stb_arr__grow(a,n), 0)))
-
-// add N new unitialized elements to the end of the array, and return
-// a pointer to the first new one
-#define stb_arr_addn(a,n)      (stb_arr__addn((a),n),(a)+stb_arr_len(a)-(n))
-
-// add N new uninitialized elements starting at index 'i'
-#define stb_arr_insertn(a,i,n) (stb__arr_insertn((void **) &(a), sizeof(*a), i, n))
-
-// insert an element at i
-#define stb_arr_insert(a,i,v)  (stb__arr_insertn((void **) &(a), sizeof(*a), i, 1), ((a)[i] = v))
-
-// delete N elements from the middle starting at index 'i'
-#define stb_arr_deleten(a,i,n) (stb__arr_deleten((void **) &(a), sizeof(*a), i, n))
-
-// delete the i'th element
-#define stb_arr_delete(a,i)   stb_arr_deleten(a,i,1)
-
-// delete the i'th element, swapping down from the end
-#define stb_arr_fastdelete(a,i)  \
-   (stb_swap(&a[i], &a[stb_arrhead(a)->len-1], sizeof(*a)), stb_arr_pop(a))
-
-
-// ARRAY STORAGE
-
-// get the array maximum storage; special case if NULL
-#define stb_arrcurmax(a)       (a ? stb_arrhead(a)->limit : 0)
-#define stb_arrcurmax2(a)      (a ? stb_arrhead2(a)->limit : 0)
-
-// set the maxlength of the array to n in anticipation of further growth
-#define stb_arr_setsize(a,n)   (stb_arr_check(a), stb__arr_setsize((void **) &(a),sizeof((a)[0]),n))
-
-// make sure maxlength is large enough for at least N new allocations
-#define stb_arr_atleast(a,n)   (stb_arr_len(a)+(n) > stb_arrcurmax(a)      \
-                                 ? stb_arr_setsize((a), (n)) : 0)
-
-// make a copy of a given array (copies contents via 'memcpy'!)
-#define stb_arr_copy(a)        stb__arr_copy(a, sizeof((a)[0]))
-
-// compute the storage needed to store all the elements of the array
-#define stb_arr_storage(a)     (stb_arr_len(a) * sizeof((a)[0]))
-
-#define stb_arr_for(v,arr)     for((v)=(arr); (v) < (arr)+stb_arr_len(arr); ++(v))
-
-
-ZENHDEF void stb_arr_free_(void **p);
-ZENHDEF void *stb__arr_copy_(void *p, int elem_size);
-ZENHDEF void stb__arr_setsize_(void **p, int size, int limit);
-ZENHDEF void stb__arr_setlen_(void **p, int size, int newlen);
-ZENHDEF void stb__arr_addlen_(void **p, int size, int addlen);
-ZENHDEF void stb__arr_deleten_(void **p, int size, int loc, int n);
-ZENHDEF void stb__arr_insertn_(void **p, int size, int loc, int n);
-
-
-#define stb_arr_free(p)            stb_arr_free_((void **) &(p))
-#define stb__arr_copy              stb__arr_copy_
-
-
-#ifndef STB_MALLOC_WRAPPER
-  #define stb__arr_setsize         stb__arr_setsize_
-  #define stb__arr_setlen          stb__arr_setlen_
-  #define stb__arr_addlen          stb__arr_addlen_
-  #define stb__arr_deleten         stb__arr_deleten_
-  #define stb__arr_insertn         stb__arr_insertn_
-#else
-  #define stb__arr_addlen(p,s,n)    stb__arr_addlen_(p,s,n,__FILE__,__LINE__)
-  #define stb__arr_setlen(p,s,n)    stb__arr_setlen_(p,s,n,__FILE__,__LINE__)
-  #define stb__arr_setsize(p,s,n)   stb__arr_setsize_(p,s,n,__FILE__,__LINE__)
-  #define stb__arr_deleten(p,s,i,n) stb__arr_deleten_(p,s,i,n,__FILE__,__LINE__)
-  #define stb__arr_insertn(p,s,i,n) stb__arr_insertn_(p,s,i,n,__FILE__,__LINE__)
-#endif
-
-
-////////////////////////////////////////////////////////////////////////////////////
-//
-// stretchy_buffer.h stb libraries
-//
-//
-
-
-#ifndef NO_STRETCHY_BUFFER_SHORT_NAMES
-#define sb_free   stb_sb_free
-#define sb_push   stb_sb_push
-#define sb_count  stb_sb_count
-#define sb_add    stb_sb_add
-#define sb_last   stb_sb_last
-#define sb_pop		stb_sb_pop
-#endif
-
-#define stb_sb_free(a)         ((a) ? free(stb__sbraw(a)),0 : 0)
-#define stb_sb_push(a,v)       (stb__sbmaybegrow(a,1), (a)[stb__sbn(a)++] = (v))
-#define stb_sb_count(a)        ((a) ? stb__sbn(a) : 0)
-#define stb_sb_add(a,n)        (stb__sbmaybegrow(a,n), stb__sbn(a)+=(n), &(a)[stb__sbn(a)-(n)])
-#define stb_sb_last(a)         ((a)[stb__sbn(a)-1])
-#define stb_sb_pop(a)          ((a)[--stb__sbn(a)])
-
-#define stb__sbraw(a) ((int *) (a) - 2)
-#define stb__sbm(a)   stb__sbraw(a)[0]
-#define stb__sbn(a)   stb__sbraw(a)[1]
-
-#define stb__sbneedgrow(a,n)  ((a)==0 || stb__sbn(a)+(n) >= stb__sbm(a))
-#define stb__sbmaybegrow(a,n) (stb__sbneedgrow(a,(n)) ? stb__sbgrow(a,n) : 0)
-#define stb__sbgrow(a,n)      (*((void **)&(a)) = stb__sbgrowf((a), (n), sizeof(*(a))))
-
-
-
-//////////////////////////////////////////////////////////////////////////////
-//
 //               Random Numbers via Meresenne Twister or LCG
 //
 // stb.h
@@ -407,142 +197,6 @@ ZENHDEF unsigned long stb_randLCG_explicit(unsigned long seed);
 #ifdef ZEN_H_IMPLEMENTATION
 
 
-////////////////////////////////////////////////////////////////////////////////////
-//
-// stretchy_buffer.h stb libraries
-//
-//
-
-
-static void * stb__sbgrowf(void *arr, int increment, int itemsize) {
-   int dbl_cur = arr ? 2*stb__sbm(arr) : 0;
-   int min_needed = stb_sb_count(arr) + increment;
-   int m = dbl_cur > min_needed ? dbl_cur : min_needed;
-   int *p = (int *) realloc(arr ? stb__sbraw(arr) : 0, itemsize * m + sizeof(int)*2);
-   if (p) {
-      if (!arr)
-         p[1] = 0;
-      p[0] = m;
-      return p+2;
-   } else {
-      #ifdef STRETCHY_BUFFER_OUT_OF_MEMORY
-      STRETCHY_BUFFER_OUT_OF_MEMORY ;
-      #endif
-      return (void *) (2*sizeof(int)); // try to force a NULL pointer exception later
-   }
-}
-
-
-//------------------------------------------ 
-//
-// stb_arr implementation
-//
-//
-
-
-void * stb__arr_copy_(void *p, int elem_size) {
-   stb__arr *q;
-   if (p == NULL) return p;
-   q = (stb__arr *) malloc(sizeof(*q) + elem_size * stb_arrhead2(p)->limit);
-   stb_arr_check2(p);
-   memcpy(q, stb_arrhead2(p), sizeof(*q) + elem_size * stb_arrhead2(p)->len);
-   return q+1;
-}
-
-
-void stb_arr_free_(void **pp) {
-   void *p = *pp;
-   stb_arr_check2(p);
-   if (p) {
-      stb__arr *q = stb_arrhead2(p);
-		free(q);
-   }
-   *pp = NULL;
-}
-
-
-static void stb__arrsize_(void **pp, int size, int limit, int len) {
-   void *p = *pp;
-   stb__arr *a;
-   stb_arr_check2(p);
-   if (p == NULL) {
-      if (len == 0 && size == 0) return;
-      a = (stb__arr *) malloc(sizeof(*a) + size*limit);
-      a->limit = limit;
-      a->len   = len;
-      a->signature = stb_arr_signature;
-   } else {
-      a = stb_arrhead2(p);
-      a->len = len;
-      if (a->limit < limit) {
-         void *p;
-         if (a->limit >= 4 && limit < a->limit * 2)
-            limit = a->limit * 2;
-            p = realloc(a, sizeof(*a) + limit*size);
-         if (p) {
-            a = (stb__arr *) p;
-            a->limit = limit;
-         } else {
-            // throw an error!
-         }
-      }
-   }
-   a->len   = zen_min(a->len, a->limit);
-   *pp = a+1;
-}
-
-
-void stb__arr_setsize_(void **pp, int size, int limit) {
-   void *p = *pp;
-   stb_arr_check2(p);
-   stb__arrsize_(pp, size, limit, stb_arr_len2(p));
-}
-
-
-void stb__arr_setlen_(void **pp, int size, int newlen) {
-   void *p = *pp;
-   stb_arr_check2(p);
-   if (stb_arrcurmax2(p) < newlen || p == NULL) {
-      stb__arrsize_(pp, size, newlen, newlen);
-   } else {
-      stb_arrhead2(p)->len = newlen;
-   }
-}
-
-
-void stb__arr_addlen_(void **p, int size, int addlen) {
-   stb__arr_setlen_(p, size, stb_arr_len2(*p) + addlen);
-}
-
-
-void stb__arr_insertn_(void **pp, int size, int i, int n) {
-   void *p = *pp;
-   if (n) {
-      int z;
-
-      if (p == NULL) {
-         stb__arr_addlen_(pp, size, n);
-         return;
-      }
-
-      z = stb_arr_len2(p);
-      stb__arr_addlen_(&p, size, n);
-      memmove((char *) p + (i+n)*size, (char *) p + i*size, size * (z-i));
-   }
-   *pp = p;
-}
-
-
-void stb__arr_deleten_(void **pp, int size, int i, int n) {
-   void *p = *pp;
-   if (n) {
-      memmove((char *) p + i*size, (char *) p + (i+n)*size, size * (stb_arr_len2(p)-(i+n)));
-      stb_arrhead2(p)->len -= n;
-   }
-   *pp = p;
-}
-
-
 // The static array needs a 
 // max, count, and cmp.  Do we really
 // need the cmp?  Could just pass in a func ptr... cmp(void *a, void *b);
@@ -577,6 +231,7 @@ void stb__arr_deleten_(void **pp, int size, int i, int n) {
 
 #endif
 
+#if 0 
 template <class K, class V> 
 class HashmapNode_t {
 	K key;
@@ -731,7 +386,9 @@ void Hashmap_t<K,V>::traverse(int (*traverse)(HashmapNode_t<K,V> *)) {
 
 }
 
+#endif
 
+#if 0
 // Static array ideas
 // TODO really easy static array list
 // needs an array, size, count(n), and cmp() func
@@ -768,7 +425,11 @@ void remove(StaticArray *arr, int v) {
 	remove_index(arr, find_index(arr, v));
 }
 
+#endif
 
+
+
+#if 0
 // Simple hashmap ideas
 #define DEFAULT_NUMBER_OF_BUCKETS 100
 
@@ -962,6 +623,9 @@ void Hashmap_set(Hashmap *map, const char *key, gbString data) {
 
 }
 
+#endif
+
+
 
 ////////////////////////////////////////////////////////////////
 //
@@ -996,7 +660,7 @@ typedef struct { char d[8]; } stb__8;
 
 
 // optimize the small cases, though you shouldn't be calling this for those!
-void stb_swap(void *p, void *q, size_t sz)
+static void stb_swap(void *p, void *q, size_t sz)
 {
    char buffer[256];
    if (p == q) return;

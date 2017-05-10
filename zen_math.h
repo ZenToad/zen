@@ -24,7 +24,7 @@ extern "C" {
 #endif
 
 #ifndef zout
-#include "zen.h"
+#include "zen_lib/zen.h"
 #endif
 
 #ifndef uint8

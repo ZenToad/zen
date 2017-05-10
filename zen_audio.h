@@ -15,6 +15,7 @@ extern "C" {
 
 
 #if defined(ZEN_LIB_DEV)
+#include "zen_lib/zen.h"
 #include "zen_math.h"
 #endif
 
@@ -26,10 +27,15 @@ typedef struct ZenAudioEngine {
 } ZenAudioEngine;
 
 
+
+ZAUDIODEF ZenAudioEngine *zen_audio_create();
 ZAUDIODEF void zen_audio_init(ZenAudioEngine *engine);
 ZAUDIODEF void zen_audio_update(ZenAudioEngine *engine);
 ZAUDIODEF void zen_audio_shutdown(ZenAudioEngine *engine);
+ZAUDIODEF void zen_audio_destroy(ZenAudioEngine *engine);
 
+ZAUDIODEF float dB_to_volume(float dB);
+ZAUDIODEF float volume_to_dB(float volume);
 
 ZAUDIODEF void zen_audio_load_sound(ZenAudioEngine *engine, const char *sound_name, bool is3d = false, bool looping = false, bool stream = false);
 ZAUDIODEF void zen_audio_unload_sound(ZenAudioEngine *engine, const char *sound_name);
@@ -55,6 +61,17 @@ ZAUDIODEF bool zen_audio_is_playing(ZenAudioEngine *engine, int channel_id);
 //------------------------------------------
 #if defined(ZEN_AUDIO_IMPLEMENTATION)
 
+ZAUDIODEF float dB_to_volume(float dB) {
+	return powf(10.0f, 0.05f * dB);
+}
+
+ZAUDIODEF float volume_to_dB(float volume) {
+	return 20.0f * log10f(volume);
+}
+
+ZAUDIODEF ZenAudioEngine *zen_audio_create() {
+	return ZEN_CALLOC(ZenAudioEngine, 1);
+}
 
 ZAUDIODEF void zen_audio_init(ZenAudioEngine *engine) {
 	// TODO: setup sound library
@@ -92,6 +109,11 @@ ZAUDIODEF void zen_audio_update(ZenAudioEngine *engine) {
 	// TODO: here we
 	// system->Update();
 
+}
+
+
+ZAUDIODEF void zen_audio_destroy(ZenAudioEngine *engine) {
+	free(engine);
 }
 
 
