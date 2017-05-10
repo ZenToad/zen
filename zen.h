@@ -543,6 +543,40 @@ void stb__arr_deleten_(void **pp, int size, int i, int n) {
 }
 
 
+// The static array needs a 
+// max, count, and cmp.  Do we really
+// need the cmp?  Could just pass in a func ptr... cmp(void *a, void *b);
+// Can we do the same tricks...
+//
+
+#if 0
+
+	so how can this work...
+
+#define	MakeStatic(prefix, type, size, data)
+	typedef struct ##prefix_StaticArray_##type {
+		int n = 0;
+		int m = size;
+		##data a[size];
+	} __##prefix_StaticArray_##type;
+
+#define static_array(prefix,type) __##prefix_StaticArray_##type.a;
+#define static_add(a,v)
+	int n = ((int *)(a) - 2)[0];
+	int m = ((int *)(a) - 2)[1];
+	GB_ASSERT(m > n);
+	a[((int *)(a) - 2)[0]++] = v;
+
+	
+	MakeStatic(arr, int, 64, int);
+	int *static = static_array(arr,int);
+
+	static_add(static, 32);
+
+	can this work?  Would be cool;
+
+#endif
+
 // Static array ideas
 // TODO really easy static array list
 // needs an array, size, count(n), and cmp() func
