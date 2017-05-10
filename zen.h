@@ -543,6 +543,162 @@ void stb__arr_deleten_(void **pp, int size, int i, int n) {
 }
 
 
+template <class K, class V> 
+class HashmapNode_t {
+	K key;
+	V value;
+	uint32_t hash;
+
+public:
+	HashmapNode_t(K key, V value) : key(key), value(value) {  }
+	virtual ~HashmapNode_t() {  }
+
+};
+
+
+template <class K, class V> 
+class Hashmap_t {
+
+	int num_buckets = 0;
+
+	HashmapNode_t<K,V> **buckets;
+	int (*compare)(K a, K b);
+
+	uint32_t hash(K key);
+	int getNode(HashmapNode_t<K,V> *bucket, uint32_t hash);
+
+public:
+
+	Hashmap_t(int buckets, int (*compare)(K, V));
+	virtual ~Hashmap_t();
+
+	V get(K key);
+	void set(K key, V value);
+	V remove(K key);
+	void traverse(int (*traverse)(HashmapNode_t<K,V> *));
+
+};
+
+
+template <class K, class V>
+Hashmap_t<K,V>::Hashmap_t(int num_buckets, int (*compare)(K,V)) {
+	this->num_buckets = num_buckets;
+	this->compare = compare;
+	for (int i = 0; i < num_buckets; ++i)
+		 stb_arr_push(this->buckets, NULL);
+}
+
+template <class K, class V>
+Hashmap_t<K,V>::~Hashmap_t() {
+	for (int i = 0; i < stb_arr_len(buckets); ++i) {
+		auto *bucket = buckets[i];
+		for (int j = 0; j < stb_arr_len(bucket); ++j) {
+			auto *node = bucket[j];
+			GB_ASSERT_NOT_NULL(node);
+			free(node);
+		}
+		stb_arr_free(bucket);
+	}
+	stb_arr_free(buckets);
+}
+
+template <class K, class V>
+int Hashmap_t<K,V>::getNode(HashmapNode_t<K,V> *bucket, uint32_t hash) {
+	for (int i = 0; i < stb_arr_len(bucket); i++) {
+		auto *node = bucket[i];
+		if (node && node->hash == hash) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+template <class K, class V>
+V Hashmap_t<K,V>::get(K key) {
+
+	uint32_t hash = hash(key);
+	int bucket_index = hash % num_buckets;
+	GB_ASSERT_MSG(bucket_index >= 0, "Invalid bucket_index found: %d", bucket_index);
+
+	auto *bucket = buckets[bucket_index];
+	if (bucket == NULL) return NULL; // not found
+
+	int i = getNode(hash, bucket);
+	if (i == -1) return NULL;
+
+	auto *node = bucket[i];
+	GB_ASSERT_MSG(node != NULL, "Failed to get node from bucket when it should exist.");
+
+	return node->value;
+
+}
+
+template <class K, class V>
+void Hashmap_t<K,V>::set(K key, V value) {
+	uint32_t hash = hash(key);
+	int bucket_index = hash % num_buckets;
+	GB_ASSERT_MSG(bucket_index >= 0, "Invalid bucket_index found: %d", bucket_index);
+
+	auto *bucket = buckets[bucket_index];
+	for (int i = 0; i < stb_arr_len(bucket); ++i) {
+		auto *node = bucket[i];
+		if (node && node->hash == hash) {
+			node->value = value;
+			return;
+		}
+	}
+
+	HashmapNode_t<K,V> *node = new HashmapNode_t<K,V>(key, value);
+	GB_ASSERT_NOT_NULL(node);
+
+	stb_arr_push(buckets[bucket_index], node);
+}
+
+template <class K, class V>
+V Hashmap_t<K,V>::remove(K key) {
+
+	uint32_t hash = hash(key);
+	int bucket_index = hash % num_buckets;
+	GB_ASSERT_MSG(bucket_index >= 0, "Invalid bucket_index found: %d", bucket_index);
+
+	auto *bucket = buckets[bucket_index];
+	if (bucket == NULL) return NULL; // not found
+
+	int i = getNode(hash, bucket);
+	if (i == -1) return NULL;
+
+	auto *node = bucket[i];
+	GB_ASSERT_NOT_NULL(node);
+	V value = node->value;
+
+	if (i != stb_arr_lastn(bucket)) {
+		stb_arr_fastdelete(bucket, i);
+	}
+	delete node;
+
+	return value;
+
+}
+
+template <class K, class V>
+void Hashmap_t<K,V>::traverse(int (*traverse)(HashmapNode_t<K,V> *)) {
+
+	for (int i = 0; i < stb_arr_len(buckets); i++) {
+		auto *bucket = buckets[i];
+		if (bucket) {
+			for (int j = 0; j < stb_arr_len(bucket); j++) {
+				auto *node = bucket[j];
+				int rc = traverse_cb(node);
+				if (rc != 0)
+					return;
+			}
+		}
+	}
+
+}
+
+
+
 // Static array ideas
 // TODO really easy static array list
 // needs an array, size, count(n), and cmp() func
@@ -657,7 +813,6 @@ void Hashmap_destroy(Hashmap * map) {
 			HashmapBucket *bucket = map->buckets[i];
 			for (int j = 0; j < stb_arr_len(bucket); ++j) {
 				HashmapNode *node = bucket[j];
-				zout("*node = 0x%lx", (uint64_t)node);
 				GB_ASSERT_NOT_NULL(node);
 				free(node);
 			}
