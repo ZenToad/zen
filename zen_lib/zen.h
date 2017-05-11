@@ -9,7 +9,7 @@
    #include ...
    #include ...
    #define ZEN_H_IMPLEMENTATION
-   #include "zen.h"
+   #include "zen_lib/zen.h"
 
 	Full license at bottom of file.	
 
