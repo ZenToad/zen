@@ -268,7 +268,7 @@ zen_inline void print(Matrix3x3_t m) {print3x3(m);}
 
 
 #ifdef ZEN_MATH_IMPLEMENTATION
-
+ 
 Color_t COLOR_WHITE = Color(255, 255, 255, 255);
 Color_t COLOR_SILVER = Color(191, 191, 191, 255);
 Color_t COLOR_GRAY = Color(128, 128, 128, 255);
@@ -285,6 +285,24 @@ Color_t COLOR_BLUE = Color(0, 0, 255, 255);
 Color_t COLOR_NAVY = Color(0, 0, 128, 255);
 Color_t COLOR_FUCHSIA = Color(255, 0, 255, 255);
 Color_t COLOR_PURPLE = Color(128, 0, 128, 255);
+
+Colorf_t COLORF_WHITE = Colorf(255/255.99f, 255/255.99f, 255/255.99f, 255/255.99f);
+Colorf_t COLORF_SILVER = Colorf(191/255.99f, 191/255.99f, 191/255.99f, 255/255.99f);
+Colorf_t COLORF_GRAY = Colorf(128/255.99f, 128/255.99f, 128/255.99f, 255/255.99f);
+Colorf_t COLORF_BLACK = Colorf(0, 0, 0, 255/255.99f);
+Colorf_t COLORF_RED = Colorf(255/255.99f, 0, 0, 255/255.99f);
+Colorf_t COLORF_MAROON = Colorf(128/255.99f, 0, 0, 255/255.99f);
+Colorf_t COLORF_YELLOW = Colorf(255/255.99f, 255/255.99f, 0, 255/255.99f);
+Colorf_t COLORF_OLIVE = Colorf(128/255.99f, 128/255.99f, 0, 255/255.99f);
+Colorf_t COLORF_LIME = Colorf(0, 255/255.99f, 0, 255/255.99f);
+Colorf_t COLORF_GREEN = Colorf(0, 128/255.99f, 0, 255/255.99f);
+Colorf_t COLORF_AQUA = Colorf(0, 255/255.99f, 255/255.99f, 255/255.99f);
+Colorf_t COLORF_TEAL = Colorf(0, 128/255.99f, 128/255.99f, 255/255.99f);
+Colorf_t COLORF_BLUE = Colorf(0, 0, 255/255.99f, 255/255.99f);
+Colorf_t COLORF_NAVY = Colorf(0, 0, 128/255.99f, 255/255.99f);
+Colorf_t COLORF_FUCHSIA = Colorf(255/255.99f, 0, 255/255.99f, 255/255.99f);
+Colorf_t COLORF_PURPLE = Colorf(128/255.99f, 0, 128/255.99f, 255/255.99f);
+
 
 ZMATHDEF Matrix2x2_t Matrix2x2() {
 	Matrix2x2_t m;

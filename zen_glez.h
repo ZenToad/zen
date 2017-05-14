@@ -4,8 +4,8 @@
 
 #if defined(ZEN_LIB_DEV)
 #include "glad/glad.h"
-#include "zen.h"
-#include "zen_math.h"
+#include "zen_lib/zen.h"
+#include "zen_lib/zen_math.h"
 #endif
 
 
@@ -384,7 +384,7 @@ static void zglez_flush_lines() {
 	glBufferSubData(GL_ARRAY_BUFFER, 0, lines->count * sizeof(Vector3_t), lines->vertices);
 
 	glBindBuffer(GL_ARRAY_BUFFER, lines->vbo_ids[1]);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, lines->count * sizeof(Color_t), lines->colors);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, lines->count * sizeof(Colorf_t), lines->colors);
 
 	glDrawArrays(GL_LINES, 0, lines->count);
 
