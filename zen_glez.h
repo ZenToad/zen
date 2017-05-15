@@ -4,8 +4,9 @@
 
 #if defined(ZEN_LIB_DEV)
 #include "glad/glad.h"
-#include "zen_lib/zen.h"
-#include "zen_lib/zen_math.h"
+#include "zen/zen_lib/zen.h"
+#include "zen/zen_lib/zen_math.h"
+#include "zen/zen_lib/zen_hashmap.h"
 #endif
 
 
@@ -26,11 +27,18 @@ ZGLEZDEF void zglez_quit();
 ZGLEZDEF void zglez_flush();
 ZGLEZDEF void zglez_projection(float m[16]);
 
+ZGLEZDEF int zglez_load_texture_from_file(const char *name, const char * path_to_file, int flip_vertically = 0);
+ZGLEZDEF int zglez_load_texture_from_memory(const char *name, char *memory, isize size_in_bytes);
+ZGLEZDEF int zglez_unload_texture(const char *name);
+ZGLEZDEF void zglez_unload_all_textures();
+
 ZGLEZDEF void zglez_point(Vector3_t v, Colorf_t c, float pt_size);
 ZGLEZDEF void zglez_line(Vector3_t v0, Colorf_t c0, Vector3_t v1, Colorf_t c1);
+ZGLEZDEF void zglez_polygon(Vector3_t *v, Colorf_t *c, int count);
+ZGLEZDEF void zglez_texture_quad(const char *name, Vector3_t *v, Vector2_t *t);
+
 
 // TODO
-// polygons
 // filled polygons
 // circles
 // filled circles
@@ -45,7 +53,11 @@ ZGLEZDEF void zglez_line(Vector3_t v0, Colorf_t c0, Vector3_t v1, Colorf_t c1);
 #endif // __ZEN_GLEZ_H__
 
 
-#if defined(ZEN_GLEZ_IMPLEMENTATION)
+#if defined(ZEN_GLEZ_IMPLEMENTATION) || defined(ZEN_LIB_DEV)
+
+
+static int32 const zglez_internal_texture_format[4] = {GL_R8, GL_RG8, GL_RGB8, GL_RGBA8};
+static int32 const zglez_texture_format[4] = {GL_RED, GL_RG, GL_RGB, GL_RGBA};
 
 
 #define ZGLEZ_CHECK_ERROR() do { \
@@ -54,6 +66,22 @@ ZGLEZDEF void zglez_line(Vector3_t v0, Colorf_t c0, Vector3_t v1, Colorf_t c1);
 		GB_PANIC("OpenGL error = %d\n", error_code); \
 	} \
 } while (0)
+
+
+typedef struct zglez_texture_t {
+
+	int32 width;
+	int32 height;
+	int32 channel_count;
+	uint32 handle;
+	uint32 active_texture;
+	uint32 sampler;
+
+} zglez_texture_t;
+
+
+stb_declare_hash(static, zglez_texture_map, zglez_texmap_, const char*, zglez_texture_t*);
+stb_define_hash_vnull(zglez_texture_map, zglez_texmap_, const char*, NULL, NULL, return stb_hash((char*)k);, zglez_texture_t*, NULL); 
 
 
 typedef struct zglez_points {
@@ -98,6 +126,31 @@ typedef struct zglez_lines {
 
 } zglez_lines;
 static zglez_lines *g_zglez_lines = 0;
+
+
+typedef struct zglez_textures {
+
+	enum {max_vertices = 32 * 6};
+	Vector3_t vertices[max_vertices];
+	Vector2_t tex_coords[max_vertices];
+	Colorf_t colors[max_vertices];
+	int32 count;
+
+	Matrix4x4_t projection;
+
+	zglez_texture_t *current_texture;
+	zglez_texture_map *map;
+
+	GLuint vao_id;
+	GLuint vbo_ids[2];
+	GLuint program_id;
+	GLint projection_uniform;
+	GLint sampler_location;
+	GLint vertex_attribute;
+	GLint tex_attribute;
+
+} zglez_textures;
+static zglez_textures *g_zglez_textures = 0;
 
 
 static void zglez_print_log(GLuint object) {
@@ -432,6 +485,266 @@ static void zglez_destroy_lines() {
 }
 
 
+ZGLEZDEF void zglez_create_textures() {
+
+	g_zglez_textures = ZEN_CALLOC(zglez_textures, 1);
+	GB_ASSERT_NOT_NULL(g_zglez_textures);
+	zglez_textures *tex = g_zglez_textures;
+
+	tex->map = zglez_texmap_create();
+
+	const char *vs = \
+		"#version 440 core\n"
+		"uniform mat4 projectionMatrix;\n"
+		"layout (location = 0) in vec3 v_position;\n"
+		"layout (location = 1) in vec2 v_tex_coord;\n"
+		"out vec2 f_tex_coord;\n"
+		"void main(void) {\n"
+		"	gl_Position = projectionMatrix * vec4(v_position, 1.0f);\n"
+		"	f_tex_coord = v_tex_coord;\n"
+		"}\n";
+
+	const char *fs = \
+		"#version 440 core\n"
+		"in vec2 f_tex_coord;\n"
+		"layout (binding = 0) uniform sampler2D u_tex;\n"
+		"out vec4 o_colour;\n"
+		"void main(void) {\n"
+		"	o_colour = texture2D(u_tex, f_tex_coord);\n"
+		"}\n";
+
+	tex->projection = Matrix4x4();
+
+	tex->program_id = zglez_create_shader_program(vs, fs);
+	tex->projection_uniform = glGetUniformLocation(tex->program_id, "projectionMatrix");
+	tex->sampler_location = glGetUniformLocation(tex->program_id, "u_tex");
+	tex->vertex_attribute = 0;
+	tex->tex_attribute = 1;
+
+	// Generate
+	glGenVertexArrays(1, &tex->vao_id);
+	glGenBuffers(2, tex->vbo_ids);
+
+	glBindVertexArray(tex->vao_id);
+	glEnableVertexAttribArray(tex->vertex_attribute);
+	glEnableVertexAttribArray(tex->tex_attribute);
+
+	// Vertex buffer
+	glBindBuffer(GL_ARRAY_BUFFER, tex->vbo_ids[0]);
+	glVertexAttribPointer(tex->vertex_attribute, 3, GL_FLOAT, GL_FALSE, 0, zen_offset(0));
+	glBufferData(GL_ARRAY_BUFFER, sizeof(tex->vertices), tex->vertices, GL_DYNAMIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, tex->vbo_ids[1]);
+	glVertexAttribPointer(tex->tex_attribute, 2, GL_FLOAT, GL_FALSE, 0, zen_offset(0));
+	glBufferData(GL_ARRAY_BUFFER, sizeof(tex->tex_coords), tex->tex_coords, GL_DYNAMIC_DRAW);
+
+	ZGLEZ_CHECK_ERROR();
+
+	// Cleanup
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+
+	tex->count = 0;
+
+}
+
+
+ZGLEZDEF void zglez_flush_textures() {
+
+	zglez_textures *textures = g_zglez_textures;
+	if (textures->count == 0 || textures->current_texture == NULL)
+		return;
+
+
+	glUseProgram(textures->program_id);
+	glBindVertexArray(textures->vao_id);
+
+	zglez_texture_t *texture = textures->current_texture;
+	glUniformMatrix4fv(textures->projection_uniform, 1, GL_FALSE, textures->projection.m);
+	glUniform1i(textures->sampler_location, texture->active_texture);
+
+	glActiveTexture(GL_TEXTURE0 + texture->active_texture);
+	glBindSampler(texture->active_texture, texture->sampler);
+
+	glBindTexture(GL_TEXTURE_2D, texture->handle);
+
+	glBindBuffer(GL_ARRAY_BUFFER, textures->vbo_ids[0]);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, textures->count * sizeof(Vector3_t), textures->vertices);
+
+	glBindBuffer(GL_ARRAY_BUFFER, textures->vbo_ids[1]);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, textures->count * sizeof(Vector2_t), textures->tex_coords);
+
+	glDrawArrays(GL_TRIANGLES, 0, textures->count);
+
+	ZGLEZ_CHECK_ERROR();
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindSampler(0, 0);
+	glUseProgram(0);
+
+	textures->count = 0;
+
+}
+
+
+static void zglez_texture_vertex(zglez_texture_t *texture, Vector3_t v, Vector2_t t) {
+
+	zglez_textures *textures = g_zglez_textures;
+	if (textures->count >= textures->max_vertices || textures->current_texture != texture)
+		zglez_flush_textures();
+
+	textures->current_texture = texture;
+	textures->vertices[textures->count] = v;
+	textures->tex_coords[textures->count] = t;
+
+	textures->count++;
+
+}
+
+
+static void zglez_delete_texture(zglez_texture_t *texture) {
+
+	glDeleteTextures(1, &texture->handle);
+	glDeleteSamplers(1, &texture->sampler);
+
+}
+
+
+static void zglez_destroy_textures() {
+
+	zglez_textures *textures = g_zglez_textures;
+	if (textures == NULL)
+		return;
+
+	const char ** keys = NULL;
+	zglez_texture_map *map = g_zglez_textures->map;
+	for (int i = 0; i < map->limit; ++i) {
+		if (map->table[i].k)
+			stb_arr_push(keys, map->table[i].k);	
+	}
+
+	zglez_texture_t *texture;
+	for (int i = 0; i < stb_arr_len(keys); ++i) {
+		if (zglez_texmap_remove(map, keys[i], &texture)) {
+			zglez_delete_texture(texture);
+			free(texture);
+		}
+	}
+
+	zglez_texmap_destroy(textures->map);
+
+
+	if (textures->vao_id) {
+		glDeleteVertexArrays(1, &textures->vao_id);
+		glDeleteBuffers(3, textures->vbo_ids);
+	}
+
+	if (textures->program_id) {
+		glDeleteProgram(textures->program_id);
+	}
+
+	free(textures);
+	stb_arr_free(keys);
+
+}
+
+
+ZGLEZDEF int zglez_load_texture_from_memory(const char *name, void const *memory, int32 width, int32 height, int32 channel_count) {
+
+
+	zglez_texture_map *map = g_zglez_textures->map;
+	zglez_texture_t *old_texture = zglez_texmap_get(map, name);
+	if (old_texture != NULL) {
+		zglez_unload_texture(name);
+	}
+
+	zglez_texture_t *texture = ZEN_CALLOC(zglez_texture_t, 1);
+	GB_ASSERT_NOT_NULL(texture);
+	zglez_texmap_set(map, name, texture);
+
+	texture->width = width;
+	texture->height = height;
+	texture->channel_count = channel_count;
+	texture->active_texture = 0;
+
+	glGenTextures(1, &texture->handle);
+	glBindTexture(GL_TEXTURE_2D, texture->handle);
+
+
+	glGenSamplers(1, &texture->sampler);
+	glSamplerParameteri(texture->sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glSamplerParameteri(texture->sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glSamplerParameteri(texture->sampler, GL_TEXTURE_WRAP_S,     GL_REPEAT);
+	glSamplerParameteri(texture->sampler, GL_TEXTURE_WRAP_T,     GL_REPEAT);
+
+
+	GB_ASSERT(GL_MAX_TEXTURE_SIZE > width);
+	GB_ASSERT(GL_MAX_TEXTURE_SIZE > height);
+
+	glTexImage2D(
+		GL_TEXTURE_2D, 0, zglez_internal_texture_format[channel_count-1], 
+		width, height, 0, zglez_texture_format[channel_count-1], 
+		GL_UNSIGNED_BYTE, memory);
+
+	glGenerateMipmap(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glFinish();
+
+	return 1;
+
+}
+
+ZGLEZDEF int zglez_load_texture_from_file(const char *name, const char * path_to_file, int flip_vertically) {
+
+	int width, height, comp;
+	stbi_set_flip_vertically_on_load(flip_vertically);
+	uint8 *data = stbi_load(path_to_file, &width, &height, &comp, 4);
+	if (data) {
+		zglez_load_texture_from_memory(name, data, width, height, 4);
+		stbi_image_free(data);
+		return 1;
+	}
+
+	return 0;
+
+}
+
+
+ZGLEZDEF int zglez_unload_texture(const char *name) {
+	zglez_texture_t *texture = NULL;
+	int result = zglez_texmap_remove(g_zglez_textures->map, name, &texture);
+	if (result) {
+		zglez_delete_texture(texture);
+		free(texture);
+	}
+	return result;
+}
+
+
+ZGLEZDEF void zglez_unload_all_textures() {
+
+	const char ** keys = NULL;
+	zglez_texture_map *map = g_zglez_textures->map;
+	for (int i = 0; i < map->limit; ++i) {
+		if (map->table[i].k)
+			stb_arr_push(keys, map->table[i].k);	
+	}
+
+	zglez_texture_t *texture = NULL;
+	for (int i = 0; i < stb_arr_len(keys); ++i) {
+		if (zglez_texmap_remove(map, keys[i], &texture)) {
+			zglez_delete_texture(texture);
+			free(texture);
+			texture = NULL;
+		}
+	}
+
+}
+
+
 ZGLEZDEF void zglez_point(Vector3_t v, Colorf_t c, float pt_size) {
 	zglez_point_vertex(v, c, pt_size);
 }
@@ -443,24 +756,61 @@ ZGLEZDEF void zglez_line(Vector3_t v0, Colorf_t c0, Vector3_t v1, Colorf_t c1) {
 }
 
 
+ZGLEZDEF void zglez_polygon(Vector3_t *v, Colorf_t *c, int count) {
+
+	Vector3_t V0 = v[count - 1];
+	Colorf_t C0 = c[count - 1];
+	for (int i = 0; i < count; ++i) {
+		Vector3_t V1 = v[i];
+		Colorf_t C1 = c[i];
+		zglez_line(V0, C0, V1, C1);
+		V0 = V1;
+		C0 = C1;
+	}
+
+}
+
+
+ZGLEZDEF void zglez_texture_quad(const char *name, Vector3_t *v, Vector2_t *t) {
+
+	zglez_texture_map *map = g_zglez_textures->map;
+	zglez_texture_t *texture = zglez_texmap_get(map, name);
+	GB_ASSERT_MSG(texture != NULL, "Texture %s not found!", name);
+
+	zglez_texture_vertex(texture, v[0], t[0]);
+	zglez_texture_vertex(texture, v[1], t[1]);
+	zglez_texture_vertex(texture, v[3], t[3]);
+
+	zglez_texture_vertex(texture, v[3], t[3]);
+	zglez_texture_vertex(texture, v[1], t[1]);
+	zglez_texture_vertex(texture, v[2], t[2]);
+
+}
+
+
 ZGLEZDEF void zglez_init() {
 
 	zgles_create_points();
 	zglez_create_lines();
+	zglez_create_textures();
 
 }
+
 
 ZGLEZDEF void zglez_projection(Matrix4x4_t mat) {
 
 	g_zglez_lines->projection = mat;
 	g_zglez_points->projection = mat;
+	g_zglez_textures->projection = mat;
 
 }
+
 
 ZGLEZDEF void zglez_flush() {
 
 	zglez_flush_points();
 	zglez_flush_lines();
+	zglez_flush_textures();
 
 }
 
@@ -469,17 +819,9 @@ ZGLEZDEF void zglez_quit() {
 
 	zglez_destroy_points();
 	zglez_destroy_lines();
+	zglez_destroy_textures();
 
 }
 
-
-//void zgl_render_polygon(Vector3_t *v, int count, Colorf_t c) {
-	//Vector3_t *S = v[count - 1];
-	//for (int i = 0; i < count; ++i) {
-		//Vector3_t *P = v[i];
-		//zgl_render_line(S, P, c);
-		//S = P;
-	//}
-//}
 
 #endif

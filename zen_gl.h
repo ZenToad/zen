@@ -443,6 +443,7 @@ static void zgl_bind_texture2d(ZGLTexture const *t, uint32 position, uint32 samp
 	glActiveTexture(GL_TEXTURE0 + position);
 	glBindTexture(GL_TEXTURE_2D, t ? t->handle : 0);
 	glBindSampler(position, sampler);
+
 }
 
 b32 zgl_load_texture2d_from_memory(ZGLTexture *tex, void const *data, int32 width, int32 height, int32 channel_count) {

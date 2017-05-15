@@ -13,11 +13,19 @@ extern "C" {
 #define ZSDL_DEF extern
 #endif
 
+
 #if defined(ZEN_LIB_DEV)
 #include "SDL.h"
 #include "glad/glad.h"
 #include "zen/zen_lib.h"
 #endif
+
+
+#define KEY_DOWN(SDL,KEY) SDL->keys[SDL_SCANCODE_##KEY]
+#define KEY_DOWN_ONCE(SDL,KEY) SDL->keys[SDL_SCANCODE_##KEY] == 1
+
+#define MOUSE_DOWN(SDL,B) SDL->mouse_button[(SDL_BUTTON_##B)-1]
+#define MOUSE_DOWN_ONCE(SDL,B) SDL->mouse_button[(SDL_BUTTON_##B)-1] == 1
 
 typedef struct SDL_Zen {
 
@@ -267,6 +275,8 @@ ZSDL_DEF void SDL_Zen_End(SDL_Zen *sdl) {
 
 
 ZSDL_DEF void SDL_Zen_Quit(SDL_Zen *sdl) {
+	int ms = (int)(1.0e3 * sdl->total_time / sdl->total_frames);
+	zout("\n%d (ms)\n", ms);
 	SDL_Quit();
 }
 
