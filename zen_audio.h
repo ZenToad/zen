@@ -16,7 +16,7 @@ extern "C" {
 
 #if defined(ZEN_LIB_DEV)
 #include "zen_lib/zen.h"
-#include "zen_math.h"
+#include "zen_lib/zen_math.h"
 #endif
 
 struct ZenAudioEngine;

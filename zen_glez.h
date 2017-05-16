@@ -923,10 +923,14 @@ void zglez_fill_polygon(Vector3_t *v, Colorf_t c, int count, bool blend) {
 
 	zglez_triangles *tri = g_zglez_triangles;
 	Colorf_t color = blend ? c * 0.5f : c;
-	for (int i = 1; i < count - 1; ++i) {
-		zglez_triangle_vertex(v[0], color);
-		zglez_triangle_vertex(v[i], color);
-		zglez_triangle_vertex(v[i+1], color);
+	Vector3_t VM = v[0];
+	Vector3_t VA = v[count - 1];
+	for (int i = 0; i < count - 1; ++i) {
+		Vector3_t VB = v[i+1];
+		zglez_triangle_vertex(VM, color);
+		zglez_triangle_vertex(VA, color);
+		zglez_triangle_vertex(VB, color);
+		VA = VB;
 	}
 
 	zglez_lines *lines = g_zglez_lines;
@@ -1032,10 +1036,10 @@ ZGLEZDEF void zglez_projection(Matrix4x4_t mat) {
 
 ZGLEZDEF void zglez_flush() {
 
-	zglez_flush_points();
-	zglez_flush_lines();
-	zglez_flush_triangles();
 	zglez_flush_textures();
+	zglez_flush_triangles();
+	zglez_flush_lines();
+	zglez_flush_points();
 
 }
 
