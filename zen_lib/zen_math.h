@@ -179,6 +179,11 @@ zen_inline Vector2_t& operator*=(Vector2_t &a, float s) {return a = a * s;}
 zen_inline Vector2_t& operator/=(Vector2_t &a, float s) {return a = a / s;}
 
 
+zen_inline Colorf_t operator*(Colorf_t c, float s) {return Colorf(c.r * s, c.g * s, c.b * s, c.a * s);}
+zen_inline Colorf_t operator*(float s, Colorf_t c) {return Colorf(c.r * s, c.g * s, c.b * s, c.a * s);}
+zen_inline Colorf_t& operator*=(Colorf_t &c, float s) {return c = c * s;}
+
+
 zen_inline float len(Vector2_t a) {return len_vec2(a);}
 zen_inline float len_sqr(Vector2_t a) {return len_sqr_vec2(a);}
 zen_inline float dot(Vector2_t a, Vector2_t b) {return dot_vec2(a, b);}

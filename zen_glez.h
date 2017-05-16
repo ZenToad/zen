@@ -32,17 +32,13 @@ ZGLEZDEF int zglez_load_texture_from_memory(const char *name, char *memory, isiz
 ZGLEZDEF int zglez_unload_texture(const char *name);
 ZGLEZDEF void zglez_unload_all_textures();
 
-ZGLEZDEF void zglez_draw_point(Vector3_t v, Colorf_t c, float pt_size);
-ZGLEZDEF void zglez_draw_line(Vector3_t v0, Colorf_t c0, Vector3_t v1, Colorf_t c1);
-ZGLEZDEF void zglez_draw_circle(Vector3_t center, float radius, Colorf_t c0, int steps = 32);
-ZGLEZDEF void zglez_draw_polygon(Vector3_t *v, Colorf_t *c, int count);
+ZGLEZDEF void zglez_draw_point(Vector3_t v, Colorf_t c, float pt_size = 2.0f);
+ZGLEZDEF void zglez_draw_line(Vector3_t v0, Vector3_t v1, Colorf_t c);
+ZGLEZDEF void zglez_draw_circle(Vector3_t center, float radius, Colorf_t c, int steps = 32);
+ZGLEZDEF void zglez_fill_circle(Vector3_t center, float radius, Colorf_t c, int steps = 32, bool blend = true);
+ZGLEZDEF void zglez_draw_polygon(Vector3_t *v, Colorf_t c, int count);
+ZGLEZDEF void zglez_fill_polygon(Vector3_t *v, Colorf_t c, int count, bool blend = true);
 ZGLEZDEF void zglez_texture_quad(const char *name, Vector3_t *v, Vector2_t *t);
-
-
-// TODO 
-// For filled stuff we need to add a triangles renderer
-// filled polygons
-// filled circles
 
 
 #if defined(__cplusplus)
@@ -53,6 +49,13 @@ ZGLEZDEF void zglez_texture_quad(const char *name, Vector3_t *v, Vector2_t *t);
 #endif // __ZEN_GLEZ_H__
 
 
+//------------------------------------------ 
+//
+//
+// IMPLEMENTATION
+//
+//
+//------------------------------------------ 
 #if defined(ZEN_GLEZ_IMPLEMENTATION) || defined(ZEN_LIB_DEV)
 
 
@@ -126,6 +129,27 @@ typedef struct zglez_lines {
 
 } zglez_lines;
 static zglez_lines *g_zglez_lines = 0;
+
+
+typedef struct zglez_triangles {
+ 
+	enum { max_vertices = 512 * 3 };
+	Vector3_t vertices[max_vertices];
+	Colorf_t colors[max_vertices];
+ 
+	Matrix4x4_t projection;
+
+	int32 count;
+    
+	GLuint vao_id;
+	GLuint vbo_ids[2];
+	GLuint program_id;
+	GLint projection_uniform;
+	GLint vertex_attribute;
+	GLint color_attribute;
+
+} zglez_triangles;
+static zglez_triangles *g_zglez_triangles = 0;
 
 
 typedef struct zglez_textures {
@@ -222,7 +246,7 @@ static GLuint zglez_create_shader_program(const char* vs, const char* fs) {
 
 static void zgles_create_points() {
 
-	g_zglez_points = (zglez_points *)calloc(1, zen_sizeof(zglez_points));
+	g_zglez_points = ZEN_CALLOC(zglez_points, 1);
 	GB_ASSERT_NOT_NULL(g_zglez_points);
 	zglez_points *points = g_zglez_points;
 
@@ -361,7 +385,7 @@ static void zglez_destroy_points() {
 
 static void zglez_create_lines() {
 
-	g_zglez_lines = (zglez_lines *)calloc(1, zen_sizeof(zglez_lines));
+	g_zglez_lines = ZEN_CALLOC(zglez_lines, 1); 
 	GB_ASSERT_NOT_NULL(g_zglez_lines);
 	zglez_lines *lines = g_zglez_lines;
 
@@ -481,6 +505,131 @@ static void zglez_destroy_lines() {
 	}
 
 	free(lines);
+
+}
+
+static void zglez_create_triangles() {
+
+	g_zglez_triangles = ZEN_CALLOC(zglez_triangles, 1);
+	GB_ASSERT_NOT_NULL(g_zglez_triangles);
+	zglez_triangles *triangles = g_zglez_triangles;
+
+	const char* vs = \
+		"#version 440\n"
+		"uniform mat4 projectionMatrix;\n"
+		"layout(location = 0) in vec3 v_position;\n"
+		"layout(location = 1) in vec4 v_color;\n"
+		"out vec4 f_color;\n"
+		"void main(void)\n"
+		"{\n"
+		"	f_color = v_color;\n"
+		"	gl_Position = projectionMatrix * vec4(v_position, 1.0f);\n"
+		"}\n";
+
+	const char* fs = \
+		"#version 440\n"
+		"in vec4 f_color;\n"
+		"out vec4 color;\n"
+		"void main(void)\n"
+		"{\n"
+		"	color = f_color;\n"
+		"}\n";
+
+	triangles->projection = Matrix4x4();
+
+	triangles->program_id = zglez_create_shader_program(vs, fs);
+	triangles->projection_uniform = glGetUniformLocation(triangles->program_id, "projectionMatrix");
+	triangles->vertex_attribute = 0;
+	triangles->color_attribute = 1;
+
+	// Generate
+	glGenVertexArrays(1, &triangles->vao_id);
+	glGenBuffers(2, triangles->vbo_ids);
+
+	glBindVertexArray(triangles->vao_id);
+	glEnableVertexAttribArray(triangles->vertex_attribute);
+	glEnableVertexAttribArray(triangles->color_attribute);
+
+	// Vertex buffer
+	glBindBuffer(GL_ARRAY_BUFFER, triangles->vbo_ids[0]);
+	glVertexAttribPointer(triangles->vertex_attribute, 3, GL_FLOAT, GL_FALSE, 0, zen_offset(0));
+	glBufferData(GL_ARRAY_BUFFER, sizeof(triangles->vertices), triangles->vertices, GL_DYNAMIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, triangles->vbo_ids[1]);
+	glVertexAttribPointer(triangles->color_attribute, 4, GL_FLOAT, GL_FALSE, 0, zen_offset(0));
+	glBufferData(GL_ARRAY_BUFFER, sizeof(triangles->colors), triangles->colors, GL_DYNAMIC_DRAW);
+
+	ZGLEZ_CHECK_ERROR();
+
+	// Cleanup
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+
+	triangles->count = 0;
+	
+}	
+
+
+static void zglez_flush_triangles() {
+
+	zglez_triangles *triangles = g_zglez_triangles;
+	if (triangles->count == 0)
+		return;
+
+	glUseProgram(triangles->program_id);
+
+	glUniformMatrix4fv(triangles->projection_uniform, 1, GL_FALSE, triangles->projection.m);
+
+	glBindVertexArray(triangles->vao_id);
+
+	glBindBuffer(GL_ARRAY_BUFFER, triangles->vbo_ids[0]);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, triangles->count * sizeof(Vector3_t), triangles->vertices);
+
+	glBindBuffer(GL_ARRAY_BUFFER, triangles->vbo_ids[1]);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, triangles->count * sizeof(Colorf_t), triangles->colors);
+
+	glDrawArrays(GL_TRIANGLES, 0, triangles->count);
+
+	ZGLEZ_CHECK_ERROR();
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+	glUseProgram(0);
+
+	triangles->count = 0;
+
+}
+
+
+static void zglez_triangle_vertex(const Vector3_t v, const Colorf_t c) {
+
+	zglez_triangles *triangles = g_zglez_triangles;
+	if (triangles->count >= triangles->max_vertices)
+		zglez_flush_triangles();
+
+	triangles->vertices[triangles->count] = v;
+	triangles->colors[triangles->count] = c;
+	++triangles->count;
+
+}
+
+
+static void zglez_destroy_triangles() {
+
+	zglez_triangles *triangles = g_zglez_triangles;
+	if (triangles == NULL)
+		return;
+
+	if (triangles->vao_id) {
+		glDeleteVertexArrays(1, &triangles->vao_id);
+		glDeleteBuffers(2, triangles->vbo_ids);
+	}
+
+	if (triangles->program_id) {
+		glDeleteProgram(triangles->program_id);
+	}
+
+	free(triangles);
 
 }
 
@@ -752,28 +901,48 @@ ZGLEZDEF void zglez_draw_point(Vector3_t v, Colorf_t c, float pt_size) {
 }
 
 
-ZGLEZDEF void zglez_draw_line(Vector3_t v0, Colorf_t c0, Vector3_t v1, Colorf_t c1) {
-	zglez_line_vertex(v0, c0);
-	zglez_line_vertex(v1, c1);
+ZGLEZDEF void zglez_draw_line(Vector3_t v0, Vector3_t v1, Colorf_t c) {
+	zglez_line_vertex(v0, c);
+	zglez_line_vertex(v1, c);
 }
 
 
-ZGLEZDEF void zglez_draw_polygon(Vector3_t *v, Colorf_t *c, int count) {
+ZGLEZDEF void zglez_draw_polygon(Vector3_t *v, Colorf_t c, int count) {
 
 	Vector3_t V0 = v[count - 1];
-	Colorf_t C0 = c[count - 1];
 	for (int i = 0; i < count; ++i) {
 		Vector3_t V1 = v[i];
-		Colorf_t C1 = c[i];
-		zglez_draw_line(V0, C0, V1, C1);
+		zglez_draw_line(V0, V1, c);
 		V0 = V1;
-		C0 = C1;
 	}
 
 }
 
 
-ZGLEZDEF void zglez_draw_circle(Vector3_t center, float radius, Colorf_t c0, int steps) {
+void zglez_fill_polygon(Vector3_t *v, Colorf_t c, int count, bool blend) {
+
+	zglez_triangles *tri = g_zglez_triangles;
+	Colorf_t color = blend ? c * 0.5f : c;
+	for (int i = 1; i < count - 1; ++i) {
+		zglez_triangle_vertex(v[0], color);
+		zglez_triangle_vertex(v[i], color);
+		zglez_triangle_vertex(v[i+1], color);
+	}
+
+	zglez_lines *lines = g_zglez_lines;
+	Vector3_t V1 = v[count - 1];
+	for (int i = 1; i < count; ++i) {
+		Vector3_t V0 = v[i];
+		zglez_line_vertex(V0, c);
+		zglez_line_vertex(V1, c);
+		V1 = V0;
+	}
+
+}
+
+
+
+ZGLEZDEF void zglez_draw_circle(Vector3_t center, float radius, Colorf_t c, int steps) {
 
 	float delta = 2.0f * M_PI / cast(float)steps;
 	float x = radius * cosf(0 * delta);
@@ -783,7 +952,41 @@ ZGLEZDEF void zglez_draw_circle(Vector3_t center, float radius, Colorf_t c0, int
 		x = radius * cosf(i * delta);
 		y = radius * sinf(i * delta);
 		Vector3_t V1 = Vector3(x, y, 0.0f);
-		zglez_draw_line(V0, c0, V1, c0);
+		zglez_draw_line(V0, V1, c);
+		V0 = V1;
+	}
+
+}
+
+
+void zglez_fill_circle(Vector3_t center, float radius, Colorf_t c, int steps, bool blend) {
+
+	float delta = 2.0f * M_PI / cast(float)steps;
+
+	zglez_triangles *tri = g_zglez_triangles;
+	float x = radius * cosf(0 * delta);
+	float y = radius * sinf(0 * delta);
+	Vector3_t V0 = Vector3(x, y, 0.0f);
+	Colorf_t color = blend ? c * 0.5f : c;
+	for (int i = 1; i <= steps; ++i) {
+		x = radius * cosf(i * delta);
+		y = radius * sinf(i * delta);
+		Vector3_t V1 = Vector3(x, y, 0.0f);
+		zglez_triangle_vertex(center, color);
+		zglez_triangle_vertex(V0, color);
+		zglez_triangle_vertex(V1, color);
+		V0 = V1;
+	}
+
+
+	x = radius * cosf(0 * delta);
+	y = radius * sinf(0 * delta);
+	V0 = Vector3(x, y, 0.0f);
+	for (int i = 1; i <= steps; ++i) {
+		x = radius * cosf(i * delta);
+		y = radius * sinf(i * delta);
+		Vector3_t V1 = Vector3(x, y, 0.0f);
+		zglez_draw_line(V0, V1, c);
 		V0 = V1;
 	}
 
@@ -811,6 +1014,7 @@ ZGLEZDEF void zglez_init() {
 
 	zgles_create_points();
 	zglez_create_lines();
+	zglez_create_triangles();
 	zglez_create_textures();
 
 }
@@ -820,6 +1024,7 @@ ZGLEZDEF void zglez_projection(Matrix4x4_t mat) {
 
 	g_zglez_lines->projection = mat;
 	g_zglez_points->projection = mat;
+	g_zglez_triangles->projection = mat;
 	g_zglez_textures->projection = mat;
 
 }
@@ -829,6 +1034,7 @@ ZGLEZDEF void zglez_flush() {
 
 	zglez_flush_points();
 	zglez_flush_lines();
+	zglez_flush_triangles();
 	zglez_flush_textures();
 
 }
@@ -838,6 +1044,7 @@ ZGLEZDEF void zglez_quit() {
 
 	zglez_destroy_points();
 	zglez_destroy_lines();
+	zglez_destroy_triangles();
 	zglez_destroy_textures();
 
 }

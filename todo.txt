@@ -38,10 +38,10 @@ typedef union Quad3_t {
 Quad3_t Quad3(float x, float y, float w, float h) {
 
 	Quad3_t quad;
-	quad.top_left = Vector3(x, y, 0.0f);
-	quad.bottom_left = Vector3(x, y + h, 0.0f);
-	quad.bottom_right = Vector3(x + w, y + h, 0.0f);
-	quad.top_right = Vector3(x + w, y, 0.0f);
+	quad.top_left = Vector3(x, y, 1.0f);
+	quad.bottom_left = Vector3(x, y + h, 1.0f);
+	quad.bottom_right = Vector3(x + w, y + h, 1.0f);
+	quad.top_right = Vector3(x + w, y, 1.0f);
 	return quad;
 
 }
@@ -92,8 +92,6 @@ Sprite *create_sprite(const char *name, const char *filename) {
 		return NULL;
 	}
 
-	//float wf = w;
-	//float hf = h;
 	float cellw = 1.0f / 8.0f;
 	float cellh = 1.0f / 8.0f;
 	Sprite *sprite = ZEN_CALLOC(Sprite, 1);
@@ -125,6 +123,7 @@ void draw_sprite(Sprite *sprite) {
 	mat = mat * rotate2D(sprite->transform.rotation);
 	mat = mat * translate(sprite->transform.position);
 
+
 	for (int i = 0; i < 4; ++i) {
 		sprite->quad_copy.v[i] = mat * sprite->quad.v[i];
 	}
@@ -140,8 +139,8 @@ int main(int argc, char *argv[]) {
 	sdl = SDL_Zen_Create();
 
 	sdl->window_title = (char *)"SDL_Testing again...";
-	sdl->window_width = 640;
-	sdl->window_height = 480;
+	sdl->window_width = 1024;
+	sdl->window_height = 1024;
 	sdl->major_version = 4;
 	sdl->minor_version = 4;
 	sdl->window_background = 0xFF444444;
@@ -154,22 +153,31 @@ int main(int argc, char *argv[]) {
 	ziout((SDL_BUTTON_RIGHT));
 
 	Vector3_t poly[] = {
+		Vector3(0.0f, 0.0f, 0.0f),
 		Vector3(0.0f, 0.5f, 0.0f),
 		Vector3(-0.5f, -0.5f, 0.0f),
 		Vector3(0.5f, -0.5f, 0.0f),
 	};
 
-	Colorf_t colors[] {
-		COLORF_GREEN,
-		COLORF_GREEN,
-		COLORF_GREEN,
+	Vector3_t poly2[] = {
+		Vector3(0.0f, 0.0f, 0.0f),
+		Vector3(0.0f, 0.5f, 0.0f),
+		Vector3(-0.5f, -0.5f, 0.0f),
+		Vector3(0.5f, -0.5f, 0.0f),
+		Vector3(0.0f, 0.5f, 0.0f),
 	};
+
 
 	Sprite *sprite = create_sprite("poop", "./poopypoo.png");
 	GB_ASSERT_NOT_NULL(sprite);
+	sprite->transform.position = Vector2(-.7f, 0.7f);
+	sprite->transform.scale = Vector2(0.25f, 0.25f);
 
-	double change = 1.0f / 24.0f;
+	double change = 1.0f / 1.0f;
 	double delta_change = 0.0f;
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	while (SDL_Zen_IsRunning(sdl)) {
 		SDL_Zen_Begin(sdl);
@@ -178,11 +186,12 @@ int main(int argc, char *argv[]) {
 		if (MOUSE_DOWN_ONCE(sdl, LEFT)) zout("LEFT down");
 		sdl->should_close = KEY_DOWN(sdl, ESCAPE);
 
-		sprite->transform.rotation += 3.14159f * sdl->delta_time * 0.1;
+		sprite->transform.rotation += M_PI * sdl->delta_time * 0.1;
 
-		zglez_line(Vector3(-0.5f, 0.0f, 0.0f), COLORF_GRAY, Vector3(0.5f, 0.0f, 0.0f), COLORF_GREEN);
-		zglez_polygon(poly, colors, 3);
-
+		zglez_draw_line(Vector3(-0.5f, 0.0f, 0.0f), Vector3(0.5f, 0.0f, 0.0f), COLORF_GREEN);
+		zglez_fill_circle(Vector3(0.0f, 0.0f, 0.0f), 0.5f, COLORF_RED);
+		zglez_fill_polygon(poly2, COLORF_BLUE, 5);
+			
 		delta_change += sdl->delta_time;
 		while (delta_change >= change) {
 			delta_change -= change;
