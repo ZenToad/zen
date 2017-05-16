@@ -27,22 +27,22 @@ ZGLEZDEF void zglez_quit();
 ZGLEZDEF void zglez_flush();
 ZGLEZDEF void zglez_projection(float m[16]);
 
-ZGLEZDEF int zglez_load_texture_from_file(const char *name, const char * path_to_file, int flip_vertically = 0);
+ZGLEZDEF int zglez_load_texture_from_file(const char *name, const char * path_to_file, int *w = 0, int *h = 0, int flip_vertically = 0);
 ZGLEZDEF int zglez_load_texture_from_memory(const char *name, char *memory, isize size_in_bytes);
 ZGLEZDEF int zglez_unload_texture(const char *name);
 ZGLEZDEF void zglez_unload_all_textures();
 
-ZGLEZDEF void zglez_point(Vector3_t v, Colorf_t c, float pt_size);
-ZGLEZDEF void zglez_line(Vector3_t v0, Colorf_t c0, Vector3_t v1, Colorf_t c1);
-ZGLEZDEF void zglez_polygon(Vector3_t *v, Colorf_t *c, int count);
+ZGLEZDEF void zglez_draw_point(Vector3_t v, Colorf_t c, float pt_size);
+ZGLEZDEF void zglez_draw_line(Vector3_t v0, Colorf_t c0, Vector3_t v1, Colorf_t c1);
+ZGLEZDEF void zglez_draw_circle(Vector3_t center, float radius, Colorf_t c0, int steps = 32);
+ZGLEZDEF void zglez_draw_polygon(Vector3_t *v, Colorf_t *c, int count);
 ZGLEZDEF void zglez_texture_quad(const char *name, Vector3_t *v, Vector2_t *t);
 
 
-// TODO
+// TODO 
+// For filled stuff we need to add a triangles renderer
 // filled polygons
-// circles
 // filled circles
-// textures
 
 
 #if defined(__cplusplus)
@@ -697,7 +697,7 @@ ZGLEZDEF int zglez_load_texture_from_memory(const char *name, void const *memory
 
 }
 
-ZGLEZDEF int zglez_load_texture_from_file(const char *name, const char * path_to_file, int flip_vertically) {
+ZGLEZDEF int zglez_load_texture_from_file(const char *name, const char * path_to_file, int *w, int *h, int flip_vertically) {
 
 	int width, height, comp;
 	stbi_set_flip_vertically_on_load(flip_vertically);
@@ -705,6 +705,8 @@ ZGLEZDEF int zglez_load_texture_from_file(const char *name, const char * path_to
 	if (data) {
 		zglez_load_texture_from_memory(name, data, width, height, 4);
 		stbi_image_free(data);
+		if (w) *w = width;
+		if (h) *h = height;
 		return 1;
 	}
 
@@ -745,27 +747,44 @@ ZGLEZDEF void zglez_unload_all_textures() {
 }
 
 
-ZGLEZDEF void zglez_point(Vector3_t v, Colorf_t c, float pt_size) {
+ZGLEZDEF void zglez_draw_point(Vector3_t v, Colorf_t c, float pt_size) {
 	zglez_point_vertex(v, c, pt_size);
 }
 
 
-ZGLEZDEF void zglez_line(Vector3_t v0, Colorf_t c0, Vector3_t v1, Colorf_t c1) {
+ZGLEZDEF void zglez_draw_line(Vector3_t v0, Colorf_t c0, Vector3_t v1, Colorf_t c1) {
 	zglez_line_vertex(v0, c0);
 	zglez_line_vertex(v1, c1);
 }
 
 
-ZGLEZDEF void zglez_polygon(Vector3_t *v, Colorf_t *c, int count) {
+ZGLEZDEF void zglez_draw_polygon(Vector3_t *v, Colorf_t *c, int count) {
 
 	Vector3_t V0 = v[count - 1];
 	Colorf_t C0 = c[count - 1];
 	for (int i = 0; i < count; ++i) {
 		Vector3_t V1 = v[i];
 		Colorf_t C1 = c[i];
-		zglez_line(V0, C0, V1, C1);
+		zglez_draw_line(V0, C0, V1, C1);
 		V0 = V1;
 		C0 = C1;
+	}
+
+}
+
+
+ZGLEZDEF void zglez_draw_circle(Vector3_t center, float radius, Colorf_t c0, int steps) {
+
+	float delta = 2.0f * M_PI / cast(float)steps;
+	float x = radius * cosf(0 * delta);
+	float y = radius * sinf(0 * delta);
+	Vector3_t V0 = Vector3(x, y, 0.0f);
+	for (int i = 1; i <= steps; ++i) {
+		x = radius * cosf(i * delta);
+		y = radius * sinf(i * delta);
+		Vector3_t V1 = Vector3(x, y, 0.0f);
+		zglez_draw_line(V0, c0, V1, c0);
+		V0 = V1;
 	}
 
 }

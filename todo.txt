@@ -1,3 +1,214 @@
+-------------------------------------------------------
+-- Sprite testing
+-------------------------------------------------------
+#define ZEN_LIB_IMPLEMENTATION 
+#define ZEN_SDL_IMPLEMENTATION
+#define ZEN_GLEZ_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+
+
+#include "glad/glad.h"
+#include <SDL.h>
+#include "stb_image.h"
+ 
+  
+#include "zen/zen_lib.h"
+#include "zen/zen_sdl.h"
+#include "zen/zen_glez.h"
+
+
+typedef union Quad3_t {
+
+	Vector3_t v[4];
+	struct {
+		Vector3_t top_left;
+		Vector3_t bottom_left;
+		Vector3_t bottom_right;
+		Vector3_t top_right;
+	};
+
+} Quad3_t;
+
+
+Quad3_t Quad3(float x, float y, float w, float h) {
+
+	Quad3_t quad;
+	quad.top_left = Vector3(x, y, 0.0f);
+	quad.bottom_left = Vector3(x, y + h, 0.0f);
+	quad.bottom_right = Vector3(x + w, y + h, 0.0f);
+	quad.top_right = Vector3(x + w, y, 0.0f);
+	return quad;
+
+}
+
+typedef union Quad2_t {
+
+	Vector2_t v[4];
+	struct {
+		Vector2_t top_left;
+		Vector2_t bottom_left;
+		Vector2_t bottom_right;
+		Vector2_t top_right;
+	};
+
+} Quad2_t;
+
+
+Quad2_t Quad2(float x, float y, float w, float h) {
+
+	Quad2_t quad;
+	quad.top_left = Vector2(x, y);
+	quad.bottom_left = Vector2(x, y + h);
+	quad.bottom_right = Vector2(x + w, y + h);
+	quad.top_right = Vector2(x + w, y);
+	return quad;
+
+}
+
+
+typedef struct Sprite {
+
+	const char *name;
+	Quad3_t quad;
+	Quad3_t quad_copy;
+	Quad2_t texture_coords[64];
+	int sprite_index;
+
+	Transform2d_t transform;
+
+} Sprite;
+
+
+Sprite *create_sprite(const char *name, const char *filename) {
+
+	int w = 0, h = 0;
+	int flip = 0;
+	if (!zglez_load_texture_from_file(name, filename, &w, &h, flip)) {
+		return NULL;
+	}
+
+	//float wf = w;
+	//float hf = h;
+	float cellw = 1.0f / 8.0f;
+	float cellh = 1.0f / 8.0f;
+	Sprite *sprite = ZEN_CALLOC(Sprite, 1);
+	sprite->name = name;
+	sprite->sprite_index = 0;
+
+	sprite->transform = Transform2d(Vector2(0.0f, 0.0f), 0.0f, Vector2(1.0f, 1.0f));
+
+	sprite->quad = Quad3(-0.5f, +0.5f, 1.0f, -1.0f);
+	for (int i = 0; i < 64; ++i) {
+		int x = i % 8;
+		int y = i / 8;
+		sprite->texture_coords[i] = Quad2(cellw * x, cellh * y, cellw, cellh);
+	}
+
+	return sprite;
+}
+
+
+#define KEY_DOWN(SDL,KEY) SDL->keys[SDL_SCANCODE_##KEY]
+
+SDL_Zen *sdl;
+
+
+void draw_sprite(Sprite *sprite) {
+
+	Matrix3x3_t mat = Matrix3x3();
+	mat = mat * scale(sprite->transform.scale);
+	mat = mat * rotate2D(sprite->transform.rotation);
+	mat = mat * translate(sprite->transform.position);
+
+	for (int i = 0; i < 4; ++i) {
+		sprite->quad_copy.v[i] = mat * sprite->quad.v[i];
+	}
+
+	int index = sprite->sprite_index;
+	zglez_texture_quad(sprite->name, sprite->quad_copy.v, sprite->texture_coords[index].v);
+
+}
+
+ 
+int main(int argc, char *argv[]) {
+
+	sdl = SDL_Zen_Create();
+
+	sdl->window_title = (char *)"SDL_Testing again...";
+	sdl->window_width = 640;
+	sdl->window_height = 480;
+	sdl->major_version = 4;
+	sdl->minor_version = 4;
+	sdl->window_background = 0xFF444444;
+
+	SDL_Zen_Init(sdl);
+	zglez_init();
+
+	ziout((SDL_BUTTON_LEFT));
+	ziout((SDL_BUTTON_MIDDLE));
+	ziout((SDL_BUTTON_RIGHT));
+
+	Vector3_t poly[] = {
+		Vector3(0.0f, 0.5f, 0.0f),
+		Vector3(-0.5f, -0.5f, 0.0f),
+		Vector3(0.5f, -0.5f, 0.0f),
+	};
+
+	Colorf_t colors[] {
+		COLORF_GREEN,
+		COLORF_GREEN,
+		COLORF_GREEN,
+	};
+
+	Sprite *sprite = create_sprite("poop", "./poopypoo.png");
+	GB_ASSERT_NOT_NULL(sprite);
+
+	double change = 1.0f / 24.0f;
+	double delta_change = 0.0f;
+
+	while (SDL_Zen_IsRunning(sdl)) {
+		SDL_Zen_Begin(sdl);
+
+		if (MOUSE_DOWN(sdl, RIGHT)) zout("Right down");
+		if (MOUSE_DOWN_ONCE(sdl, LEFT)) zout("LEFT down");
+		sdl->should_close = KEY_DOWN(sdl, ESCAPE);
+
+		sprite->transform.rotation += 3.14159f * sdl->delta_time * 0.1;
+
+		zglez_line(Vector3(-0.5f, 0.0f, 0.0f), COLORF_GRAY, Vector3(0.5f, 0.0f, 0.0f), COLORF_GREEN);
+		zglez_polygon(poly, colors, 3);
+
+		delta_change += sdl->delta_time;
+		while (delta_change >= change) {
+			delta_change -= change;
+			sprite->sprite_index++;
+			if (sprite->sprite_index > 63)
+				sprite->sprite_index = 0;
+		}
+		draw_sprite(sprite);
+
+		zglez_flush();
+		SDL_Zen_End(sdl);
+	}
+
+	SDL_Zen_Quit(sdl);
+	zglez_quit();
+
+	SDL_Zen_Destroy(sdl);
+
+	return 0;
+
+}
+-------------------------------------------------------
+-- Sprite testing
+-------------------------------------------------------
+
+
 this isn't working atm...
 void lets_try_hashmap() {
 
