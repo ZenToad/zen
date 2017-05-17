@@ -8,7 +8,7 @@
 #include "zen/zen_lib/zen_math.h"
 #include "zen/zen_lib/zen_hashmap.h"
 #endif
-
+ 
 
 #if defined(ZEN_GLEZ_STATIC)
 #define ZGLEZDEF static
@@ -25,7 +25,7 @@ extern "C" {
 ZGLEZDEF void zglez_init();
 ZGLEZDEF void zglez_quit();
 ZGLEZDEF void zglez_flush();
-ZGLEZDEF void zglez_projection(float m[16]);
+ZGLEZDEF void zglez_projection(Matrix4x4_t m);
 
 ZGLEZDEF int zglez_load_texture_from_file(const char *name, const char * path_to_file, int *w = 0, int *h = 0, int flip_vertically = 0);
 ZGLEZDEF int zglez_load_texture_from_memory(const char *name, char *memory, isize size_in_bytes);

@@ -42,6 +42,8 @@ typedef struct ZGLFW {
 	double current_time;
 	double last_time;
 	double delta_time;
+	double total_time;
+	int total_frames;
 
 	float mouse_x;
 	float mouse_y;
@@ -240,6 +242,8 @@ ZGLFWDEF void zglfw_init(ZGLFW *glfw) {
 	glfw->current_time = glfwGetTime();
 	glfw->last_time = glfw->current_time;
 	glfw->delta_time = 0.0;
+	glfw->total_time = 0.0;
+	glfw->total_frames = 0;
 
 }
 
@@ -257,6 +261,8 @@ ZGLFWDEF void zglfw_begin(ZGLFW *glfw) {
 	glfw->last_time = glfw->current_time;
 	glfw->current_time = glfwGetTime();
 	glfw->delta_time = glfw->current_time - glfw->last_time;
+	glfw->total_time += glfw->delta_time;
+	glfw->total_frames++;
 
 	double x, y;
 	glfwGetCursorPos(glfw->window, &x, &y);
@@ -306,6 +312,8 @@ ZGLFWDEF void zglfw_end(ZGLFW *glfw) {
 }
 
 ZGLFWDEF void zglfw_quit(ZGLFW *glfw) {
+	int ms = (int)(1.0e3 * glfw->total_time / glfw->total_frames);
+	zout("\n%d (ms)\n", ms);
 	glfwDestroyWindow(glfw->window);
 	glfwTerminate();
 }

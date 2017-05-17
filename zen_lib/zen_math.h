@@ -133,6 +133,10 @@ ZMATHDEF Vector3_t add_vec3(Vector3_t a, Vector3_t b);
 ZMATHDEF Vector3_t sub_vec3(Vector3_t a, Vector3_t b);
 ZMATHDEF Vector3_t mul_vec3(Vector3_t v, float s);
 ZMATHDEF float dot_vec3(Vector3_t a, Vector3_t b);
+ZMATHDEF float len_vec3(Vector3_t a);
+ZMATHDEF float len_sqr_vec3(Vector3_t a);
+ZMATHDEF Vector3_t norm_vec3(Vector3_t a);
+ZMATHDEF Vector3_t lerp_vec3(Vector3_t a, Vector3_t b, float t);
 
 ZMATHDEF Vector4_t add_vec4(Vector4_t a, Vector4_t b);
 ZMATHDEF Vector4_t sub_vec4(Vector4_t a, Vector4_t b);
@@ -150,10 +154,16 @@ ZMATHDEF Matrix3x3_t scale_mat3x3(Matrix3x3_t m, Vector2_t v);
 ZMATHDEF Matrix4x4_t trans_mat4x4(Matrix4x4_t m, Vector3_t v);
 ZMATHDEF Matrix4x4_t rotz_mat4x4(Matrix4x4_t m, float rad);
 ZMATHDEF Matrix4x4_t scale_mat4x4(Matrix4x4_t m, Vector3_t v);
+ZMATHDEF int inverse_mat4x4(Matrix4x4_t mat, Matrix4x4_t *out);
 
-ZMATHDEF void print4x4(Matrix4x4_t m);
-ZMATHDEF void print_v3(Vector3_t v);
-ZMATHDEF void print3x3(Matrix3x3_t m);
+//TODO - ortho and perspective mat generation...
+
+ZMATHDEF void print_vec2(Vector2_t v);
+ZMATHDEF void print_vec3(Vector3_t v);
+ZMATHDEF void print_vec4(Vector4_t v);
+ZMATHDEF void print_mat2x2(Matrix2x2_t m);
+ZMATHDEF void print_mat3x3(Matrix3x3_t m);
+ZMATHDEF void print_mat4x4(Matrix4x4_t m);
 
 #ifdef __cplusplus
 }
@@ -178,6 +188,22 @@ zen_inline Vector2_t& operator-=(Vector2_t &a, Vector2_t b) {return a = a - b;}
 zen_inline Vector2_t& operator*=(Vector2_t &a, float s) {return a = a * s;}
 zen_inline Vector2_t& operator/=(Vector2_t &a, float s) {return a = a / s;}
 
+zen_inline Vector3_t operator+(Vector3_t a) {return a;}
+zen_inline Vector3_t operator+(Vector3_t a, Vector3_t b) {return Vector3(a.x + b.x, a.y + b.y, a.z + b.z);}
+
+zen_inline Vector3_t operator-(Vector3_t a) {return Vector3(-a.x, -a.y, -a.z);}
+zen_inline Vector3_t operator-(Vector3_t a, Vector3_t b) {return Vector3(a.x - b.x, a.y - b.y, a.z - b.z);}
+
+zen_inline Vector3_t operator*(Vector3_t a, float s) {return Vector3(a.x * s, a.y * s, a.z * s);}
+zen_inline Vector3_t operator*(float s, Vector3_t a) {return Vector3(a.x * s, a.y * s, a.z * s);}
+
+zen_inline Vector3_t operator/(Vector3_t a, float s) {return Vector3(a.x / s, a.y / s, a.z / s);}
+
+zen_inline Vector3_t& operator+=(Vector3_t &a, Vector3_t b) {return a = a + b;}
+zen_inline Vector3_t& operator-=(Vector3_t &a, Vector3_t b) {return a = a - b;}
+zen_inline Vector3_t& operator*=(Vector3_t &a, float s) {return a = a * s;}
+zen_inline Vector3_t& operator/=(Vector3_t &a, float s) {return a = a / s;}
+
 
 zen_inline Colorf_t operator*(Colorf_t c, float s) {return Colorf(c.r * s, c.g * s, c.b * s, c.a * s);}
 zen_inline Colorf_t operator*(float s, Colorf_t c) {return Colorf(c.r * s, c.g * s, c.b * s, c.a * s);}
@@ -189,6 +215,20 @@ zen_inline float len_sqr(Vector2_t a) {return len_sqr_vec2(a);}
 zen_inline float dot(Vector2_t a, Vector2_t b) {return dot_vec2(a, b);}
 zen_inline Vector2_t norm(Vector2_t a) {return norm_vec2(a);}
 zen_inline Vector2_t lerp(Vector2_t a, Vector2_t b, float t) {return (1.0f - t) * a + t * b;}
+
+zen_inline float len(Vector3_t a) {return len_vec3(a);}
+zen_inline float len_sqr(Vector3_t a) {return len_sqr_vec3(a);}
+zen_inline float dot(Vector3_t a, Vector3_t b) {return dot_vec3(a, b);}
+zen_inline Vector3_t norm(Vector3_t a) {return norm_vec3(a);}
+zen_inline Vector3_t lerp(Vector3_t a, Vector3_t b, float t) {return (1.0f - t) * a + t * b;}
+
+zen_inline Vector3_t cross(Vector3_t a, Vector3_t b) {
+	return Vector3(
+		a.y * b.z - a.z * b.y,
+		a.z * b.x - a.x * b.z,
+		a.x * b.y - a.y * b.x
+	);
+}
 
 
 zen_inline Matrix2x2_t operator*(Matrix2x2_t a, Matrix2x2_t b) {
@@ -219,12 +259,38 @@ zen_inline Matrix3x3_t operator*(Matrix3x3_t a, Matrix3x3_t b) {
 	return out;
 }
 
+zen_inline Matrix4x4_t operator*(Matrix4x4_t a, Matrix4x4_t b) {
+	Matrix4x4_t out;
+	for (int32 i = 0; i < 4; ++i) {
+		for (int32 j = 0; j < 4; ++j) {
+			float f = 0.f;
+			for (int32 k = 0; k < 4; ++k) {
+				f += a.m[i*4+k] * b.m[k*4+j];
+			}
+			out.m[i*4+j] = f;
+		}
+	}
+	return out;
+}
+
 zen_inline Vector3_t operator*(Matrix3x3_t m, Vector3_t v) {
 	Vector3_t out;
 	for (int32 i = 0; i < 3; ++i) {
 		float f = 0.f;
 		for (int32 j = 0; j < 3; ++j) {
 			f += m.m[j*3+i] * v.e[j];
+		}
+		out.e[i] = f;
+	}
+	return out;
+}
+
+zen_inline Vector4_t operator*(Matrix4x4_t m, Vector4_t v) {
+	Vector4_t out;
+	for (int32 i = 0; i < 4; ++i) {
+		float f = 0.f;
+		for (int32 j = 0; j < 4; ++j) {
+			f += m.m[j*4+i] * v.e[j];
 		}
 		out.e[i] = f;
 	}
@@ -256,7 +322,12 @@ zen_inline Matrix3x3_t scale(Vector2_t v) {
 	return scale;
 }
 
-zen_inline void print(Matrix3x3_t m) {print3x3(m);}
+zen_inline void print(Vector2_t m) {print_vec2(m);}
+zen_inline void print(Vector3_t m) {print_vec3(m);}
+zen_inline void print(Vector4_t m) {print_vec4(m);}
+zen_inline void print(Matrix2x2_t m) {print_mat2x2(m);}
+zen_inline void print(Matrix3x3_t m) {print_mat3x3(m);}
+zen_inline void print(Matrix4x4_t m) {print_mat4x4(m);}
 
 #endif
 
@@ -441,6 +512,28 @@ ZMATHDEF float dot_vec3(Vector3_t a, Vector3_t b) {
 	return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
+ZMATHDEF float len_vec3(Vector3_t a) {
+	return sqrt(a.x*a.x + a.y*a.y + a.z*a.z);
+}
+
+ZMATHDEF float len_sqr_vec3(Vector3_t a) {
+	return a.x*a.x + a.y*a.y + a.z*a.z;
+}
+
+ZMATHDEF Vector3_t norm_vec3(Vector3_t a) {
+	float len = sqrt(a.x*a.x + a.y*a.y + a.z*a.z);
+	if (len == 0.0) return Vector3(0, 0, 0);
+	return mul_vec3(a, 1.0f / len);
+}
+
+ZMATHDEF Vector3_t lerp_vec3(Vector3_t a, Vector3_t b, float t) {
+	Vector3_t result;
+	result.x = (1.0f - t) * a.x + t * b.x;
+	result.y = (1.0f - t) * a.y + t * b.y;
+	result.z = (1.0f - t) * a.z + t * b.z;
+	return result;
+}
+
 ZMATHDEF Vector4_t add_vec4(Vector4_t a, Vector4_t b) {
 	return Vector4(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
 }
@@ -556,6 +649,34 @@ ZMATHDEF Matrix4x4_t trans_mat4x4(Matrix4x4_t m, Vector3_t v) {
 	return mul_mat4x4(m, trans);
 }
 
+ZMATHDEF Matrix4x4_t rotx_mat4x4(Matrix4x4_t m, float rad) {
+
+	Matrix4x4_t rot = Matrix4x4();
+	float c = cosf(rad);
+	float s = sinf(rad);
+	
+	rot.m[5] = c;
+	rot.m[6] = s;
+	rot.m[9] = -s;
+	rot.m[10] = c;
+
+	return mul_mat4x4(m, rot);
+}
+
+ZMATHDEF Matrix4x4_t roty_mat4x4(Matrix4x4_t m, float rad) {
+
+	Matrix4x4_t rot = Matrix4x4();
+	float c = cosf(rad);
+	float s = sinf(rad);
+	
+	rot.m[0] = c;
+	rot.m[2] = -s;
+	rot.m[8] = s;
+	rot.m[10] = c;
+
+	return mul_mat4x4(m, rot);
+}
+
 ZMATHDEF Matrix4x4_t rotz_mat4x4(Matrix4x4_t m, float rad) {
 
 	Matrix4x4_t rot = Matrix4x4();
@@ -578,28 +699,88 @@ ZMATHDEF Matrix4x4_t scale_mat4x4(Matrix4x4_t m, Vector3_t v) {
 	return mul_mat4x4(m, scale);
 }
 
-ZMATHDEF void print_v2(Vector2_t v) {
+ZMATHDEF int inverse_mat4x4(Matrix4x4_t mat, Matrix4x4_t *out) {
+
+	float *m = mat.m;
+	Matrix4x4_t inv_mat;
+	float *inv = inv_mat.m;
+	float det;
+	int32 i;
+
+	inv[0] =   m[5]*m[10]*m[15] - m[5]*m[11]*m[14] - m[9]*m[6]*m[15] 
+			 +   m[9]*m[7]*m[14]  + m[13]*m[6]*m[11] - m[13]*m[7]*m[10];
+	inv[4] =  -m[4]*m[10]*m[15] + m[4]*m[11]*m[14] + m[8]*m[6]*m[15]
+	       -   m[8]*m[7]*m[14]  - m[12]*m[6]*m[11] + m[12]*m[7]*m[10];
+	inv[8] =   m[4]*m[9]*m[15]  - m[4]*m[11]*m[13] - m[8]*m[5]*m[15] 
+		      + m[8]*m[7]*m[13]  + m[12]*m[5]*m[11] - m[12]*m[7]*m[9];
+	inv[12] = -m[4]*m[9]*m[14]  + m[4]*m[10]*m[13] + m[8]*m[5]*m[14]
+	      	- m[8]*m[6]*m[13]  - m[12]*m[5]*m[10] + m[12]*m[6]*m[9];
+	inv[1] =  -m[1]*m[10]*m[15] + m[1]*m[11]*m[14] + m[9]*m[2]*m[15] 
+		      - m[9]*m[3]*m[14]  - m[13]*m[2]*m[11] + m[13]*m[3]*m[10];
+	inv[5] =   m[0]*m[10]*m[15] - m[0]*m[11]*m[14] - m[8]*m[2]*m[15] 
+		      + m[8]*m[3]*m[14]  + m[12]*m[2]*m[11] - m[12]*m[3]*m[10];
+	inv[9] =  -m[0]*m[9]*m[15]  + m[0]*m[11]*m[13] + m[8]*m[1]*m[15] 
+		      - m[8]*m[3]*m[13]  - m[12]*m[1]*m[11] + m[12]*m[3]*m[9];
+	inv[13] =  m[0]*m[9]*m[14]  - m[0]*m[10]*m[13] - m[8]*m[1]*m[14] 
+		      + m[8]*m[2]*m[13]  + m[12]*m[1]*m[10] - m[12]*m[2]*m[9];
+	inv[2] =   m[1]*m[6]*m[15]  - m[1]*m[7]*m[14]  - m[5]*m[2]*m[15] 
+		      + m[5]*m[3]*m[14]  + m[13]*m[2]*m[7]  - m[13]*m[3]*m[6];
+	inv[6] =  -m[0]*m[6]*m[15]  + m[0]*m[7]*m[14]  + m[4]*m[2]*m[15] 
+		      - m[4]*m[3]*m[14]  - m[12]*m[2]*m[7]  + m[12]*m[3]*m[6];
+	inv[10] =  m[0]*m[5]*m[15]  - m[0]*m[7]*m[13]  - m[4]*m[1]*m[15] 
+		      + m[4]*m[3]*m[13]  + m[12]*m[1]*m[7]  - m[12]*m[3]*m[5];
+	inv[14] = -m[0]*m[5]*m[14]  + m[0]*m[6]*m[13]  + m[4]*m[1]*m[14] 
+		      - m[4]*m[2]*m[13]  - m[12]*m[1]*m[6]  + m[12]*m[2]*m[5];
+	inv[3] =  -m[1]*m[6]*m[11]  + m[1]*m[7]*m[10]  + m[5]*m[2]*m[11] 
+		      - m[5]*m[3]*m[10]  - m[9]*m[2]*m[7]   + m[9]*m[3]*m[6];
+	inv[7] =   m[0]*m[6]*m[11]  - m[0]*m[7]*m[10]  - m[4]*m[2]*m[11] 
+		      + m[4]*m[3]*m[10]  + m[8]*m[2]*m[7]   - m[8]*m[3]*m[6];
+	inv[11] = -m[0]*m[5]*m[11]  + m[0]*m[7]*m[9]   + m[4]*m[1]*m[11] 
+		      - m[4]*m[3]*m[9]   - m[8]*m[1]*m[7]   + m[8]*m[3]*m[5];
+	inv[15] =  m[0]*m[5]*m[10]  - m[0]*m[6]*m[9]   - m[4]*m[1]*m[10] 
+		      + m[4]*m[2]*m[9]   + m[8]*m[1]*m[6]   - m[8]*m[2]*m[5];
+
+	det = m[0]*inv[0] + m[1]*inv[4] + m[2]*inv[8] + m[3]*inv[12];
+	if (det == 0)
+		return 0;
+
+	det = 1.f / det;
+
+	for (i = 0; i < 16; i++)
+		out->m[i] = inv[i] * det;
+
+	return 1;
+}
+
+ZMATHDEF void print_vec2(Vector2_t v) {
 	zout("[%.4f, %.4f]\n", v.e[0], v.e[1]);
 }
 
-ZMATHDEF void print_v3(Vector3_t v) {
+ZMATHDEF void print_vec3(Vector3_t v) {
 	zout("[%.4f, %.4f, %.4f]\n", v.e[0], v.e[1], v.e[2]);
 }
 
-ZMATHDEF void print_v4(Vector4_t v) {
+ZMATHDEF void print_vec4(Vector4_t v) {
 	zout("[%.4f, %.4f, %.4f, %.4f]\n", v.e[0], v.e[1], v.e[2], v.e[2]);
 }
 
-ZMATHDEF void print4x4(Matrix4x4_t m) {
-	for (int32 i = 0; i < 4; ++i) {
-		zout("[%.4f, %.4f, %.4f, %.4f]", m.m[i*4+0], m.m[i*4+1], m.m[i*4+2], m.m[i*4+3]);
+ZMATHDEF void print_mat2x2(Matrix2x2_t m) {
+	for (int32 i = 0; i < 2; ++i) {
+		zout("[%.4f, %.4f]", m.m[i*2+0], m.m[i*2+1]);
 	}
 	zout("");
 }
 
-ZMATHDEF void print3x3(Matrix3x3_t m) {
+ZMATHDEF void print_mat3x3(Matrix3x3_t m) {
 	for (int32 i = 0; i < 3; ++i) {
 		zout("[%.4f, %.4f, %.4f]", m.m[i*3+0], m.m[i*3+1], m.m[i*3+2]);
+	}
+	zout("");
+}
+
+ZMATHDEF void print_mat4x4(Matrix4x4_t m) {
+	for (int32 i = 0; i < 4; ++i) {
+		zout("[%.4f, %.4f, %.4f, %.4f]", m.m[i*4+0], m.m[i*4+1], m.m[i*4+2], m.m[i*4+3]);
 	}
 	zout("");
 }

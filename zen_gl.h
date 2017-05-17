@@ -45,6 +45,7 @@ extern "C" {
 typedef enum ZGLShaderType {
 	ZGL_VERTEX_SHADER,
 	ZGL_FRAGMENT_SHADER,
+	ZGL_COMPUTE_SHADER,
 
 	ZGL_SHADER_COUNT,
 } ZGLShaderType;
@@ -219,6 +220,45 @@ static char zgl_err_buf[1024];
  
 int32 const zglInternalTextureFormat_8[4]  = { GL_R8,   GL_RG8,   GL_RGB8,	  GL_RGBA8   };
 int32 const zglTextureFormat[4] = { GL_RED, GL_RG, GL_RGB, GL_RGBA };
+
+ZGLDEF b32 zgl_create_compute_shader(ZGLShader *shader, const char *compute_shader) {
+
+	shader->shaders[ZGL_COMPUTE_SHADER] = glCreateShader(GL_COMPUTE_SHADER);
+	glShaderSource(shader->shaders[ZGL_COMPUTE_SHADER], 1, &compute_shader, NULL);
+	glCompileShader(shader->shaders[ZGL_COMPUTE_SHADER]);
+
+	GLint result = GL_FALSE;
+	glGetShaderiv(shader->shaders[ZGL_COMPUTE_SHADER], GL_COMPILE_STATUS, &result);
+	if (!result) {
+		GLint len = 0;
+		glGetShaderiv(shader->shaders[ZGL_COMPUTE_SHADER], GL_INFO_LOG_LENGTH, &len);
+		if(len > 1023) len = 1023;
+		glGetShaderInfoLog(shader->shaders[ZGL_COMPUTE_SHADER], len, NULL, zgl_err_buf);
+		zgl_err_buf[len] = '\0';
+		printf("----- Shader compile error: %s:%d\n%s\n", __FILE__, __LINE__, zgl_err_buf);
+      return false;
+	}
+
+	shader->program = glCreateProgram();
+	glAttachShader(shader->program, shader->shaders[ZGL_COMPUTE_SHADER]);
+	glLinkProgram(shader->program);
+
+	glGetProgramiv(shader->program, GL_LINK_STATUS, &result);
+	if (!result) {
+		GLint len = 0;
+		glGetProgramiv(shader->program, GL_INFO_LOG_LENGTH, &len);
+		if(len > 1023) len = 1023;
+		glGetProgramInfoLog(shader->program, len, NULL, zgl_err_buf);
+		zgl_err_buf[len] = '\0';
+		printf("----- Program link error: %s:%d\n%s\n", __FILE__, __LINE__, zgl_err_buf);
+      return false;
+	}
+
+	glDetachShader(shader->program, shader->shaders[ZGL_COMPUTE_SHADER]);
+
+   return true;
+
+}
 
 static ZGLShaderError zgl_create_shader(ZGLShader *shader, const char* vertex_shader, const char* fragment_shader) {
 
