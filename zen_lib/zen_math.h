@@ -1,4 +1,4 @@
-/* zen_math.h - v0.02 - public domain utility -https://github.com/ZenToad/zen
+/* zen_math.h - v0.42 - public domain utility -https://github.com/ZenToad/zen
                                      no warranty implied; use at your own risk
 
    Do this:
@@ -27,6 +27,7 @@ extern "C" {
 #include "zen_lib/zen.h"
 #endif
 
+
 #ifndef uint8
 #include <stdint.h>
 typedef int8_t int8;
@@ -39,19 +40,19 @@ typedef uint32_t uint32;
 typedef uint64_t uint64;
 #endif
 
+
 #ifndef cosf
 #include <math.h>
 #endif
+
 
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif
 
 
-#define ZM_DEG2RAD(d) ((d) * M_PI / 180.0)
-#define ZM_RAD2DEG(r) ((r) * 180.0 / M_PI)
-#define ZM_DEG2RADF(d) (cast(float)ZM_DEG2RAD((d)))
-#define ZM_RAD2DEGF(r) (cast(float)ZM_RAD2DEG((d)))
+#define ZM_DEG2RAD M_PI / 180.0
+#define ZM_RAD2DEG 180.0 / M_PI
 
 
 #ifdef ZEN_MATH_STATIC
@@ -65,28 +66,34 @@ typedef union Matrix2x2_t {
 	float m[4];
 } Matrix2x2_t;
 
+
 typedef union Matrix3x3_t {
 	float m[9];
 } Matrix3x3_t;
 
+
 typedef union Matrix4x4_t {
 	float m[16];
 } Matrix4x4_t;
+
 
 typedef union Vector2_t {
 	struct { float x, y; };
 	float e[2];
 } Vector2_t;
 
+
 typedef union Vector3_t {
 	struct { float x, y, z; };
 	float e[3];
 } Vector3_t;
 
+
 typedef union Vector4_t {
 	struct { float x, y, z, w; };
 	float e[4];
 } Vector4_t;
+
 
 typedef union Color_t {
 	struct{ uint8 r, g, b, a; };
@@ -94,69 +101,90 @@ typedef union Color_t {
 	uint8 e[4];
 } Color_t;
 
+
 typedef union Colorf_t {
 	struct{ float r, g, b, a; };
 	float e[4];
 } Colorf_t;
 
-typedef struct Transform2d_t {
 
+typedef struct Transform2d_t {
 	Vector2_t position;
 	Vector2_t scale;
 	float rotation;
-
 } Transform2d_t;
+
 
 ZMATHDEF Matrix2x2_t Matrix2x2();
 ZMATHDEF Matrix3x3_t Matrix3x3();
 ZMATHDEF Matrix4x4_t Matrix4x4();
 
+
 ZMATHDEF Vector2_t Vector2(float x, float y);
 ZMATHDEF Vector3_t Vector3(float x, float y, float z);
 ZMATHDEF Vector4_t Vector4(float x, float y, float z, float w);
 
-ZMATHDEF Color_t Color(uint8 r, uint8 g, uint8 b, uint8 a);
+
+ZMATHDEF Color_t Color(uint8 r, uint8 g, uint8 b, uint8 a = 255);
 ZMATHDEF Colorf_t Colorf(float r, float g, float b, float a = 1.0f);
 
+// @TODO(tim):This really doesn't go here
 ZMATHDEF Transform2d_t Transform2d(Vector2_t position, float rotation, Vector2_t scale);
+
 
 ZMATHDEF Vector2_t add_vec2(Vector2_t a, Vector2_t b);
 ZMATHDEF Vector2_t sub_vec2(Vector2_t a, Vector2_t b);
 ZMATHDEF Vector2_t mul_vec2(Vector2_t v, float s);
+ZMATHDEF Vector2_t inv_vec2(Vector2_t v);
 ZMATHDEF float dot_vec2(Vector2_t a, Vector2_t b);
 ZMATHDEF float len_vec2(Vector2_t a);
 ZMATHDEF float len_sqr_vec2(Vector2_t a);
 ZMATHDEF Vector2_t norm_vec2(Vector2_t a);
 ZMATHDEF Vector2_t lerp_vec2(Vector2_t a, Vector2_t b, float t);
 
+
 ZMATHDEF Vector3_t add_vec3(Vector3_t a, Vector3_t b);
 ZMATHDEF Vector3_t sub_vec3(Vector3_t a, Vector3_t b);
 ZMATHDEF Vector3_t mul_vec3(Vector3_t v, float s);
+ZMATHDEF Vector3_t inv_vec3(Vector3_t v);
 ZMATHDEF float dot_vec3(Vector3_t a, Vector3_t b);
 ZMATHDEF float len_vec3(Vector3_t a);
 ZMATHDEF float len_sqr_vec3(Vector3_t a);
 ZMATHDEF Vector3_t norm_vec3(Vector3_t a);
 ZMATHDEF Vector3_t lerp_vec3(Vector3_t a, Vector3_t b, float t);
+ZMATHDEF Vector3_t cross_vec3(Vector3_t a, Vector3_t b);
+
 
 ZMATHDEF Vector4_t add_vec4(Vector4_t a, Vector4_t b);
 ZMATHDEF Vector4_t sub_vec4(Vector4_t a, Vector4_t b);
 ZMATHDEF Vector4_t mul_vec4(Vector4_t v, float s);
+ZMATHDEF Vector4_t inv_vec4(Vector4_t v);
 ZMATHDEF float dot_vec4(Vector4_t a, Vector4_t b);
+
 
 ZMATHDEF Matrix2x2_t mul_mat2x2(Matrix2x2_t a, Matrix2x2_t b);
 ZMATHDEF Matrix3x3_t mul_mat3x3(Matrix3x3_t a, Matrix3x3_t b);
 ZMATHDEF Matrix4x4_t mul_mat4x4(Matrix4x4_t a, Matrix4x4_t b);
 
+
 ZMATHDEF Matrix3x3_t trans_mat3x3(Matrix3x3_t m, Vector2_t v);
 ZMATHDEF Matrix3x3_t rot_mat3x3(Matrix3x3_t m, float rad);
 ZMATHDEF Matrix3x3_t scale_mat3x3(Matrix3x3_t m, Vector2_t v);
 
+
 ZMATHDEF Matrix4x4_t trans_mat4x4(Matrix4x4_t m, Vector3_t v);
+ZMATHDEF Matrix4x4_t rotx_mat4x4(Matrix4x4_t m, float rad);
+ZMATHDEF Matrix4x4_t roty_mat4x4(Matrix4x4_t m, float rad);
 ZMATHDEF Matrix4x4_t rotz_mat4x4(Matrix4x4_t m, float rad);
 ZMATHDEF Matrix4x4_t scale_mat4x4(Matrix4x4_t m, Vector3_t v);
 ZMATHDEF int inverse_mat4x4(Matrix4x4_t mat, Matrix4x4_t *out);
 
-//TODO - ortho and perspective mat generation...
+
+ZMATHDEF Matrix4x4_t ortho_mat4x4(float b, float t, float l, float r, float n, float f);
+ZMATHDEF Matrix4x4_t frustum_mat4x4(float b, float t, float l, float r, float n, float f);
+ZMATHDEF Matrix4x4_t perspective_mat4x4(float fovy, float aspect, float n, float f);
+ZMATHDEF Matrix4x4_t look_at_mat4x4(Vector3_t eye, Vector3_t center, Vector3_t up);
+
 
 ZMATHDEF void print_vec2(Vector2_t v);
 ZMATHDEF void print_vec3(Vector3_t v);
@@ -165,6 +193,7 @@ ZMATHDEF void print_mat2x2(Matrix2x2_t m);
 ZMATHDEF void print_mat3x3(Matrix3x3_t m);
 ZMATHDEF void print_mat4x4(Matrix4x4_t m);
 
+
 #ifdef __cplusplus
 }
 #endif
@@ -172,32 +201,30 @@ ZMATHDEF void print_mat4x4(Matrix4x4_t m);
 
 #ifdef __cplusplus
 
+
 zen_inline Vector2_t operator+(Vector2_t a) {return a;}
 zen_inline Vector2_t operator+(Vector2_t a, Vector2_t b) {return Vector2(a.x + b.x, a.y + b.y);}
-
 zen_inline Vector2_t operator-(Vector2_t a) {return Vector2(-a.x, -a.y);}
 zen_inline Vector2_t operator-(Vector2_t a, Vector2_t b) {return Vector2(a.x - b.x, a.y - b.y);}
-
 zen_inline Vector2_t operator*(Vector2_t a, float s) {return Vector2(a.x * s, a.y * s);}
 zen_inline Vector2_t operator*(float s, Vector2_t a) {return Vector2(a.x * s, a.y * s);}
-
 zen_inline Vector2_t operator/(Vector2_t a, float s) {return Vector2(a.x / s, a.y / s);}
+
 
 zen_inline Vector2_t& operator+=(Vector2_t &a, Vector2_t b) {return a = a + b;}
 zen_inline Vector2_t& operator-=(Vector2_t &a, Vector2_t b) {return a = a - b;}
 zen_inline Vector2_t& operator*=(Vector2_t &a, float s) {return a = a * s;}
 zen_inline Vector2_t& operator/=(Vector2_t &a, float s) {return a = a / s;}
 
+
 zen_inline Vector3_t operator+(Vector3_t a) {return a;}
 zen_inline Vector3_t operator+(Vector3_t a, Vector3_t b) {return Vector3(a.x + b.x, a.y + b.y, a.z + b.z);}
-
 zen_inline Vector3_t operator-(Vector3_t a) {return Vector3(-a.x, -a.y, -a.z);}
 zen_inline Vector3_t operator-(Vector3_t a, Vector3_t b) {return Vector3(a.x - b.x, a.y - b.y, a.z - b.z);}
-
 zen_inline Vector3_t operator*(Vector3_t a, float s) {return Vector3(a.x * s, a.y * s, a.z * s);}
 zen_inline Vector3_t operator*(float s, Vector3_t a) {return Vector3(a.x * s, a.y * s, a.z * s);}
-
 zen_inline Vector3_t operator/(Vector3_t a, float s) {return Vector3(a.x / s, a.y / s, a.z / s);}
+
 
 zen_inline Vector3_t& operator+=(Vector3_t &a, Vector3_t b) {return a = a + b;}
 zen_inline Vector3_t& operator-=(Vector3_t &a, Vector3_t b) {return a = a - b;}
@@ -216,19 +243,13 @@ zen_inline float dot(Vector2_t a, Vector2_t b) {return dot_vec2(a, b);}
 zen_inline Vector2_t norm(Vector2_t a) {return norm_vec2(a);}
 zen_inline Vector2_t lerp(Vector2_t a, Vector2_t b, float t) {return (1.0f - t) * a + t * b;}
 
+
 zen_inline float len(Vector3_t a) {return len_vec3(a);}
 zen_inline float len_sqr(Vector3_t a) {return len_sqr_vec3(a);}
 zen_inline float dot(Vector3_t a, Vector3_t b) {return dot_vec3(a, b);}
 zen_inline Vector3_t norm(Vector3_t a) {return norm_vec3(a);}
 zen_inline Vector3_t lerp(Vector3_t a, Vector3_t b, float t) {return (1.0f - t) * a + t * b;}
-
-zen_inline Vector3_t cross(Vector3_t a, Vector3_t b) {
-	return Vector3(
-		a.y * b.z - a.z * b.y,
-		a.z * b.x - a.x * b.z,
-		a.x * b.y - a.y * b.x
-	);
-}
+zen_inline Vector3_t cross(Vector3_t a, Vector3_t b) {return cross_vec3(a, b);}
 
 
 zen_inline Matrix2x2_t operator*(Matrix2x2_t a, Matrix2x2_t b) {
@@ -245,6 +266,7 @@ zen_inline Matrix2x2_t operator*(Matrix2x2_t a, Matrix2x2_t b) {
 	return out;
 }
 
+
 zen_inline Matrix3x3_t operator*(Matrix3x3_t a, Matrix3x3_t b) {
 	Matrix3x3_t out;
 	for (int32 i = 0; i < 3; ++i) {
@@ -258,6 +280,7 @@ zen_inline Matrix3x3_t operator*(Matrix3x3_t a, Matrix3x3_t b) {
 	}
 	return out;
 }
+
 
 zen_inline Matrix4x4_t operator*(Matrix4x4_t a, Matrix4x4_t b) {
 	Matrix4x4_t out;
@@ -273,6 +296,7 @@ zen_inline Matrix4x4_t operator*(Matrix4x4_t a, Matrix4x4_t b) {
 	return out;
 }
 
+
 zen_inline Vector3_t operator*(Matrix3x3_t m, Vector3_t v) {
 	Vector3_t out;
 	for (int32 i = 0; i < 3; ++i) {
@@ -284,6 +308,7 @@ zen_inline Vector3_t operator*(Matrix3x3_t m, Vector3_t v) {
 	}
 	return out;
 }
+
 
 zen_inline Vector4_t operator*(Matrix4x4_t m, Vector4_t v) {
 	Vector4_t out;
@@ -297,12 +322,14 @@ zen_inline Vector4_t operator*(Matrix4x4_t m, Vector4_t v) {
 	return out;
 }
 
+
 zen_inline Matrix3x3_t translate(Vector2_t v) {
 	Matrix3x3_t trans = Matrix3x3();
 	trans.m[6] = v.x;
 	trans.m[7] = v.y;
 	return trans;
 }
+
 
 zen_inline Matrix3x3_t rotate2D(float rad) {
 	Matrix3x3_t rot = Matrix3x3();
@@ -315,12 +342,14 @@ zen_inline Matrix3x3_t rotate2D(float rad) {
 	return rot;
 }
 
+
 zen_inline Matrix3x3_t scale(Vector2_t v) {
 	Matrix3x3_t scale = Matrix3x3();
 	scale.m[0] = v.x;
 	scale.m[4] = v.y;
 	return scale;
 }
+
 
 zen_inline void print(Vector2_t m) {print_vec2(m);}
 zen_inline void print(Vector3_t m) {print_vec3(m);}
@@ -329,7 +358,9 @@ zen_inline void print(Matrix2x2_t m) {print_mat2x2(m);}
 zen_inline void print(Matrix3x3_t m) {print_mat3x3(m);}
 zen_inline void print(Matrix4x4_t m) {print_mat4x4(m);}
 
+
 #endif
+
 
 #endif // __ZEN_MATN_H__
 
@@ -345,6 +376,7 @@ zen_inline void print(Matrix4x4_t m) {print_mat4x4(m);}
 
 #ifdef ZEN_MATH_IMPLEMENTATION
  
+
 Color_t COLOR_WHITE = Color(255, 255, 255, 255);
 Color_t COLOR_SILVER = Color(191, 191, 191, 255);
 Color_t COLOR_GRAY = Color(128, 128, 128, 255);
@@ -361,6 +393,7 @@ Color_t COLOR_BLUE = Color(0, 0, 255, 255);
 Color_t COLOR_NAVY = Color(0, 0, 128, 255);
 Color_t COLOR_FUCHSIA = Color(255, 0, 255, 255);
 Color_t COLOR_PURPLE = Color(128, 0, 128, 255);
+
 
 Colorf_t COLORF_WHITE = Colorf(255/255.99f, 255/255.99f, 255/255.99f, 255/255.99f);
 Colorf_t COLORF_SILVER = Colorf(191/255.99f, 191/255.99f, 191/255.99f, 255/255.99f);
@@ -387,6 +420,7 @@ ZMATHDEF Matrix2x2_t Matrix2x2() {
 	return m;
 }
 
+
 ZMATHDEF Matrix3x3_t Matrix3x3() {
 	Matrix3x3_t m;
 	for (int32 i = 0; i < 9; ++i)
@@ -396,6 +430,7 @@ ZMATHDEF Matrix3x3_t Matrix3x3() {
 	m.m[8] = 1.f;
 	return m;
 }
+
 
 ZMATHDEF Matrix4x4_t Matrix4x4() {
 	Matrix4x4_t m;
@@ -409,12 +444,14 @@ ZMATHDEF Matrix4x4_t Matrix4x4() {
 	return m;
 }
 
+
 ZMATHDEF Vector2_t Vector2(float x, float y) {
 	Vector2_t v;
 	v.x = x;
 	v.y = y;
 	return v;
 }
+
 
 ZMATHDEF Vector3_t Vector3(float x, float y, float z) {
 	Vector3_t v;
@@ -423,6 +460,7 @@ ZMATHDEF Vector3_t Vector3(float x, float y, float z) {
 	v.z = z;
 	return v;
 }
+
 
 ZMATHDEF Vector4_t Vector4(float x, float y, float z, float w) {
 	Vector4_t v;
@@ -433,6 +471,7 @@ ZMATHDEF Vector4_t Vector4(float x, float y, float z, float w) {
 	return v;
 }
 
+
 ZMATHDEF Color_t Color(uint8 r, uint8 g, uint8 b, uint8 a) {
 	Color_t c;
 	c.r = r;
@@ -441,6 +480,7 @@ ZMATHDEF Color_t Color(uint8 r, uint8 g, uint8 b, uint8 a) {
 	c.a = a;
 	return c;
 }
+
 
 ZMATHDEF Colorf_t Colorf(float r, float g, float b, float a) {
 	Colorf_t c;
@@ -451,6 +491,7 @@ ZMATHDEF Colorf_t Colorf(float r, float g, float b, float a) {
 	return c;
 }
 
+
 ZMATHDEF Transform2d_t Transform2d(Vector2_t position, float rotation, Vector2_t scale) {
 	Transform2d_t t;
 	t.position = position;
@@ -459,35 +500,48 @@ ZMATHDEF Transform2d_t Transform2d(Vector2_t position, float rotation, Vector2_t
 	return t;
 }
 
+
 ZMATHDEF Vector2_t add_vec2(Vector2_t a, Vector2_t b) {
 	return Vector2(a.x + b.x, a.y + b.y);
 }
+
 
 ZMATHDEF Vector2_t sub_vec2(Vector2_t a, Vector2_t b) {
 	return Vector2(a.x - b.x, a.y - b.y);
 }
 
+
 ZMATHDEF Vector2_t mul_vec2(Vector2_t v, float s) {
 	return Vector2(v.x * s, v.y * s);
 }
+
+
+ZMATHDEF Vector2_t inv_vec2(Vector2_t v) {
+	return Vector2(-v.x, -v.y);
+}
+
 
 ZMATHDEF float dot_vec2(Vector2_t a, Vector2_t b) {
 	return a.x * b.x + a.y * b.y;
 }
 
+
 ZMATHDEF float len_vec2(Vector2_t a) {
 	return sqrt(a.x*a.x + a.y*a.y);
 }
 
+
 ZMATHDEF float len_sqr_vec2(Vector2_t a) {
 	return a.x*a.x + a.y*a.y;
 }
+
 
 ZMATHDEF Vector2_t norm_vec2(Vector2_t a) {
 	float len = sqrt(a.x*a.x + a.y*a.y);
 	if (len == 0.0) return Vector2(0, 0);
 	return mul_vec2(a, 1.0f / len);
 }
+
 
 ZMATHDEF Vector2_t lerp_vec2(Vector2_t a, Vector2_t b, float t) {
 	Vector2_t result;
@@ -496,35 +550,48 @@ ZMATHDEF Vector2_t lerp_vec2(Vector2_t a, Vector2_t b, float t) {
 	return result;
 }
 
+
 ZMATHDEF Vector3_t add_vec3(Vector3_t a, Vector3_t b) {
 	return Vector3(a.x + b.x, a.y + b.y, a.z + b.z);
 }
+
 
 ZMATHDEF Vector3_t sub_vec3(Vector3_t a, Vector3_t b) {
 	return Vector3(a.x - b.x, a.y - b.y, a.z - b.z);
 }
 
+
 ZMATHDEF Vector3_t mul_vec3(Vector3_t v, float s) {
 	return Vector3(v.x * s, v.y * s, v.z * s);
 }
+
+
+ZMATHDEF Vector3_t inv_vec3(Vector3_t v) {
+	return Vector3(-v.x, -v.y, -v.z);
+}
+
 
 ZMATHDEF float dot_vec3(Vector3_t a, Vector3_t b) {
 	return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
+
 ZMATHDEF float len_vec3(Vector3_t a) {
 	return sqrt(a.x*a.x + a.y*a.y + a.z*a.z);
 }
 
+
 ZMATHDEF float len_sqr_vec3(Vector3_t a) {
 	return a.x*a.x + a.y*a.y + a.z*a.z;
 }
+
 
 ZMATHDEF Vector3_t norm_vec3(Vector3_t a) {
 	float len = sqrt(a.x*a.x + a.y*a.y + a.z*a.z);
 	if (len == 0.0) return Vector3(0, 0, 0);
 	return mul_vec3(a, 1.0f / len);
 }
+
 
 ZMATHDEF Vector3_t lerp_vec3(Vector3_t a, Vector3_t b, float t) {
 	Vector3_t result;
@@ -534,21 +601,40 @@ ZMATHDEF Vector3_t lerp_vec3(Vector3_t a, Vector3_t b, float t) {
 	return result;
 }
 
+
+ZMATHDEF Vector3_t cross_vec3(Vector3_t a, Vector3_t b) {
+	return Vector3(
+		a.y * b.z - a.z * b.y,
+		a.z * b.x - a.x * b.z,
+		a.x * b.y - a.y * b.x
+	);
+}
+
+
 ZMATHDEF Vector4_t add_vec4(Vector4_t a, Vector4_t b) {
 	return Vector4(a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w);
 }
+
 
 ZMATHDEF Vector4_t sub_vec4(Vector4_t a, Vector4_t b) {
 	return Vector4(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w);
 }
 
+
 ZMATHDEF Vector4_t mul_vec4(Vector4_t v, float s) {
 	return Vector4(v.x * s, v.y * s, v.z * s, v.w * s);
 }
 
+
+ZMATHDEF Vector4_t inv_vec4(Vector4_t v) {
+	return Vector4(-v.x, -v.y, -v.z, -v.w);
+}
+
+
 ZMATHDEF float dot_vec4(Vector4_t a, Vector4_t b) {
 	return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
+
 
 ZMATHDEF Matrix2x2_t mul_mat2x2(Matrix2x2_t a, Matrix2x2_t b) {
 	Matrix2x2_t out;
@@ -564,6 +650,7 @@ ZMATHDEF Matrix2x2_t mul_mat2x2(Matrix2x2_t a, Matrix2x2_t b) {
 	return out;
 }
 
+
 ZMATHDEF Matrix3x3_t mul_mat3x3(Matrix3x3_t a, Matrix3x3_t b) {
 	Matrix3x3_t out;
 	for (int32 i = 0; i < 3; ++i) {
@@ -577,6 +664,7 @@ ZMATHDEF Matrix3x3_t mul_mat3x3(Matrix3x3_t a, Matrix3x3_t b) {
 	}
 	return out;
 }
+
 
 ZMATHDEF Matrix4x4_t mul_mat4x4(Matrix4x4_t a, Matrix4x4_t b) {
 	Matrix4x4_t out;
@@ -592,6 +680,7 @@ ZMATHDEF Matrix4x4_t mul_mat4x4(Matrix4x4_t a, Matrix4x4_t b) {
 	return out;
 }
 
+
 ZMATHDEF Vector3_t mul_mat3x3_vec3(Matrix3x3_t m, Vector3_t v) {
 	Vector3_t out;
 	for (int32 i = 0; i < 3; ++i) {
@@ -603,6 +692,7 @@ ZMATHDEF Vector3_t mul_mat3x3_vec3(Matrix3x3_t m, Vector3_t v) {
 	}
 	return out;
 }
+
 
 ZMATHDEF Vector4_t mul_mat4x4_vec4(Matrix4x4_t m, Vector4_t v) {
 	Vector4_t out;
@@ -616,12 +706,14 @@ ZMATHDEF Vector4_t mul_mat4x4_vec4(Matrix4x4_t m, Vector4_t v) {
 	return out;
 }
 
+
 ZMATHDEF Matrix3x3_t trans_mat3x3(Matrix3x3_t m, Vector2_t v) {
 	Matrix3x3_t trans = Matrix3x3();
 	trans.m[6] = v.x;
 	trans.m[7] = v.y;
 	return mul_mat3x3(m, trans);
 }
+
 
 ZMATHDEF Matrix3x3_t rot_mat3x3(Matrix3x3_t m, float rad) {
 	Matrix3x3_t rot = Matrix3x3();
@@ -634,12 +726,14 @@ ZMATHDEF Matrix3x3_t rot_mat3x3(Matrix3x3_t m, float rad) {
 	return mul_mat3x3(m, rot);
 }
 
+
 ZMATHDEF Matrix3x3_t scale_mat3x3(Matrix3x3_t m, Vector2_t v) {
 	Matrix3x3_t scale = Matrix3x3();
 	scale.m[0] = v.x;
 	scale.m[4] = v.y;
 	return mul_mat3x3(m, scale);
 }
+
 
 ZMATHDEF Matrix4x4_t trans_mat4x4(Matrix4x4_t m, Vector3_t v) {
 	Matrix4x4_t trans = Matrix4x4();
@@ -648,6 +742,7 @@ ZMATHDEF Matrix4x4_t trans_mat4x4(Matrix4x4_t m, Vector3_t v) {
 	trans.m[14] = v.z;
 	return mul_mat4x4(m, trans);
 }
+
 
 ZMATHDEF Matrix4x4_t rotx_mat4x4(Matrix4x4_t m, float rad) {
 
@@ -663,6 +758,7 @@ ZMATHDEF Matrix4x4_t rotx_mat4x4(Matrix4x4_t m, float rad) {
 	return mul_mat4x4(m, rot);
 }
 
+
 ZMATHDEF Matrix4x4_t roty_mat4x4(Matrix4x4_t m, float rad) {
 
 	Matrix4x4_t rot = Matrix4x4();
@@ -676,6 +772,7 @@ ZMATHDEF Matrix4x4_t roty_mat4x4(Matrix4x4_t m, float rad) {
 
 	return mul_mat4x4(m, rot);
 }
+
 
 ZMATHDEF Matrix4x4_t rotz_mat4x4(Matrix4x4_t m, float rad) {
 
@@ -691,6 +788,7 @@ ZMATHDEF Matrix4x4_t rotz_mat4x4(Matrix4x4_t m, float rad) {
 	return mul_mat4x4(m, rot);
 }
 
+
 ZMATHDEF Matrix4x4_t scale_mat4x4(Matrix4x4_t m, Vector3_t v) {
 	Matrix4x4_t scale = Matrix4x4();
 	scale.m[0] = v.x;
@@ -698,6 +796,7 @@ ZMATHDEF Matrix4x4_t scale_mat4x4(Matrix4x4_t m, Vector3_t v) {
 	scale.m[10] = v.z;
 	return mul_mat4x4(m, scale);
 }
+
 
 ZMATHDEF int inverse_mat4x4(Matrix4x4_t mat, Matrix4x4_t *out) {
 
@@ -752,17 +851,122 @@ ZMATHDEF int inverse_mat4x4(Matrix4x4_t mat, Matrix4x4_t *out) {
 	return 1;
 }
 
+
+ZMATHDEF Matrix4x4_t ortho_mat4x4(float b, float t, float l, float r, float n, float f) {
+
+	Matrix4x4_t mat;
+
+	mat.m[ 0] = 2.0f / (r - l);
+	mat.m[ 1] = 0.0f;
+	mat.m[ 2] = 0.0f;
+	mat.m[ 3] = 0.0f;
+
+	mat.m[ 4] = 0.0f;
+	mat.m[ 5] = 2.0f / (t - b);
+	mat.m[ 6] = 0.0f;
+	mat.m[ 7] = 0.0f;
+
+	mat.m[ 8] = 0.0f;
+	mat.m[ 9] = 0.0f;
+	mat.m[10] = -2.0f / (f - n);
+	mat.m[11] = 0.0f;
+
+	mat.m[12] = -(r + l) / (r - l);
+	mat.m[13] = -(t + b) / (t - b);
+	mat.m[14] = -(f + n) / (f - n);
+	mat.m[15] = 1.0f;
+
+	return mat;
+
+}
+
+
+ZMATHDEF Matrix4x4_t frustum_mat4x4(float b, float t, float l, float r, float n, float f) {
+
+	Matrix4x4_t mat;
+
+	mat.m[ 0] = 2.0f * n / (r - l);
+	mat.m[ 1] = 0.0f;
+	mat.m[ 2] = 0.0f;
+	mat.m[ 3] = 0.0f;
+
+	mat.m[ 4] = 0.0f;
+	mat.m[ 5] = 2.0f * n / (t - b);
+	mat.m[ 6] = 0.0f;
+	mat.m[ 7] = 0.0f;
+
+	mat.m[ 8] = (r + l) / (r - l);
+	mat.m[ 9] = (t + b) / (t - b);
+	mat.m[10] = -(f + n) / (f - n);
+	mat.m[11] = -1.0f;
+
+	mat.m[12] = 0.0f;
+	mat.m[13] = 0.0f;
+	mat.m[14] = -2.0f * f * n / (f - n);
+	mat.m[15] = 0.0f;
+
+	return mat;
+
+}
+
+
+ZMATHDEF Matrix4x4_t perspective_mat4x4(float fovy, float aspect, float n, float f) {
+
+	float scale = tanf(fovy * 0.5f * M_PI / 180.0f) * n;
+	float r = aspect * scale;
+	float l = -r;
+	float t = scale;
+	float b = -t;
+
+	return frustum_mat4x4(b, t, l, r, n, f);
+
+}
+
+
+ZMATHDEF Matrix4x4_t look_at_mat4x4(Vector3_t eye, Vector3_t center, Vector3_t up) {
+
+	Vector3_t forward = sub_vec3(center, eye);
+	forward = norm_vec3(forward);
+
+	Vector3_t side = cross_vec3(forward, up);
+	side = norm_vec3(side);
+
+	// recompute up = side x forward
+	up = cross_vec3(side, forward);
+
+	Matrix4x4_t m;
+
+	m.m[ 0] = side.x;
+	m.m[ 1] = side.y;
+	m.m[ 2] = side.z;
+
+	m.m[ 4] = up.x;
+	m.m[ 5] = up.y;
+	m.m[ 6] = up.z;
+
+	m.m[ 8] = -forward.x;
+	m.m[ 9] = -forward.y;
+	m.m[10] = -forward.z;
+
+	return trans_mat4x4(m, inv_vec3(eye));
+
+}
+
+
 ZMATHDEF void print_vec2(Vector2_t v) {
 	zout("[%.4f, %.4f]\n", v.e[0], v.e[1]);
 }
+
 
 ZMATHDEF void print_vec3(Vector3_t v) {
 	zout("[%.4f, %.4f, %.4f]\n", v.e[0], v.e[1], v.e[2]);
 }
 
+
 ZMATHDEF void print_vec4(Vector4_t v) {
 	zout("[%.4f, %.4f, %.4f, %.4f]\n", v.e[0], v.e[1], v.e[2], v.e[2]);
 }
+
 
 ZMATHDEF void print_mat2x2(Matrix2x2_t m) {
 	for (int32 i = 0; i < 2; ++i) {
@@ -771,6 +975,7 @@ ZMATHDEF void print_mat2x2(Matrix2x2_t m) {
 	zout("");
 }
 
+
 ZMATHDEF void print_mat3x3(Matrix3x3_t m) {
 	for (int32 i = 0; i < 3; ++i) {
 		zout("[%.4f, %.4f, %.4f]", m.m[i*3+0], m.m[i*3+1], m.m[i*3+2]);
@@ -778,12 +983,14 @@ ZMATHDEF void print_mat3x3(Matrix3x3_t m) {
 	zout("");
 }
 
+
 ZMATHDEF void print_mat4x4(Matrix4x4_t m) {
 	for (int32 i = 0; i < 4; ++i) {
 		zout("[%.4f, %.4f, %.4f, %.4f]", m.m[i*4+0], m.m[i*4+1], m.m[i*4+2], m.m[i*4+3]);
 	}
 	zout("");
 }
+
 
 #endif // ZEN_MATH_IMPLEMENTATION
 
