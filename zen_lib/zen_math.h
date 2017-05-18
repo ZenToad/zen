@@ -115,6 +115,13 @@ typedef struct Transform2d_t {
 } Transform2d_t;
 
 
+typedef struct Transform3d_t {
+	Vector3_t position;
+	Vector3_t rotation;
+	Vector3_t scale;
+} Transform3d_t;
+
+
 ZMATHDEF Matrix2x2_t Matrix2x2();
 ZMATHDEF Matrix3x3_t Matrix3x3();
 ZMATHDEF Matrix4x4_t Matrix4x4();
@@ -130,6 +137,7 @@ ZMATHDEF Colorf_t Colorf(float r, float g, float b, float a = 1.0f);
 
 // @TODO(tim):This really doesn't go here
 ZMATHDEF Transform2d_t Transform2d(Vector2_t position, float rotation, Vector2_t scale);
+ZMATHDEF Transform3d_t Transform3d(Vector3_t position, Vector3_t rotation, Vector3_t scale);
 
 
 ZMATHDEF Vector2_t add_vec2(Vector2_t a, Vector2_t b);
@@ -351,6 +359,21 @@ zen_inline Matrix3x3_t scale(Vector2_t v) {
 }
 
 
+zen_inline Matrix4x4_t translate(Vector3_t v) {
+	return trans_mat4x4(Matrix4x4(), v);
+}
+
+
+zen_inline Matrix4x4_t rotx(float rad) {
+	return rotx_mat4x4(Matrix4x4(), rad);
+}
+
+
+zen_inline Matrix4x4_t scale(Vector3_t v) {
+	return scale_mat4x4(Matrix4x4(), v);
+}
+
+
 zen_inline void print(Vector2_t m) {print_vec2(m);}
 zen_inline void print(Vector3_t m) {print_vec3(m);}
 zen_inline void print(Vector4_t m) {print_vec4(m);}
@@ -500,6 +523,13 @@ ZMATHDEF Transform2d_t Transform2d(Vector2_t position, float rotation, Vector2_t
 	return t;
 }
 
+ZMATHDEF Transform3d_t Transform3d(Vector3_t position, Vector3_t rotation, Vector3_t scale) {
+	Transform3d_t t;
+	t.position = position;
+	t.rotation = rotation;
+	t.scale = scale;
+	return t;
+}
 
 ZMATHDEF Vector2_t add_vec2(Vector2_t a, Vector2_t b) {
 	return Vector2(a.x + b.x, a.y + b.y);
@@ -934,7 +964,7 @@ ZMATHDEF Matrix4x4_t look_at_mat4x4(Vector3_t eye, Vector3_t center, Vector3_t u
 	// recompute up = side x forward
 	up = cross_vec3(side, forward);
 
-	Matrix4x4_t m;
+	Matrix4x4_t m = Matrix4x4();
 
 	m.m[ 0] = side.x;
 	m.m[ 1] = side.y;
