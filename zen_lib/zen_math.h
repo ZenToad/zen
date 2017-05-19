@@ -869,7 +869,7 @@ ZMATHDEF Matrix4x4_t frustum_mat4x4(float b, float t, float l, float r, float n,
 
 ZMATHDEF Matrix4x4_t perspective_mat4x4(float fovy, float aspect, float n, float f) {
 
-	float scale = tanf(fovy * 0.5f * M_PI / 180.0f) * n;
+	float scale = tanf(fovy * 0.5f * ZM_DEG2RAD) * n;
 	float r = aspect * scale;
 	float l = -r;
 	float t = scale;
