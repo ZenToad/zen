@@ -260,9 +260,8 @@ ZGLDEF b32 zgl_create_compute_shader(ZGLShader *shader, const char *compute_shad
 
 }
 
-static ZGLShaderError zgl_create_shader(ZGLShader *shader, const char* vertex_shader, const char* fragment_shader) {
+static b32 zgl_create_shader(ZGLShader *shader, const char* vertex_shader, const char* fragment_shader) {
 
-	ZGLShaderError status = ZGL_ERROR_NONE;
 	shader->uniform_count = 0;
 	shader->shaders[ZGL_VERTEX_SHADER] = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(shader->shaders[ZGL_VERTEX_SHADER], 1, &vertex_shader, NULL);
@@ -277,7 +276,7 @@ static ZGLShaderError zgl_create_shader(ZGLShader *shader, const char* vertex_sh
 		glGetShaderInfoLog(shader->shaders[ZGL_VERTEX_SHADER], len, NULL, zgl_err_buf);
 		zgl_err_buf[len] = '\0';
 		printf("----- Shader compile error: %s:%d\n%s\n", __FILE__, __LINE__, zgl_err_buf);
-		status = ZGL_VERTEX_COMPILE_ERROR;
+		return false;
 	}
 
 	shader->shaders[ZGL_FRAGMENT_SHADER] = glCreateShader(GL_FRAGMENT_SHADER);
@@ -292,7 +291,7 @@ static ZGLShaderError zgl_create_shader(ZGLShader *shader, const char* vertex_sh
 		glGetShaderInfoLog(shader->shaders[ZGL_FRAGMENT_SHADER], len, NULL, zgl_err_buf);
 		zgl_err_buf[len] = '\0';
 		printf("----- Shader compile error: %s:%d\n%s\n", __FILE__, __LINE__, zgl_err_buf);
-		status = ZGL_FRAGMENT_COMPILE_ERROR;
+		return false;
 	}
 
 	shader->program = glCreateProgram();
@@ -308,13 +307,13 @@ static ZGLShaderError zgl_create_shader(ZGLShader *shader, const char* vertex_sh
 		glGetProgramInfoLog(shader->program, len, NULL, zgl_err_buf);
 		zgl_err_buf[len] = '\0';
 		printf("----- Program link error: %s:%d\n%s\n", __FILE__, __LINE__, zgl_err_buf);
-		status = ZGL_LINKER_ERROR;
+		return false;
 	}
 
 	glDetachShader(shader->program, shader->shaders[ZGL_VERTEX_SHADER]);
 	glDetachShader(shader->program, shader->shaders[ZGL_FRAGMENT_SHADER]);
 
-	return status;
+	return true;
 
 }
 
@@ -887,7 +886,7 @@ ZGLDEF void zgl_bs_initialize(ZGLBasicState *bs) {
 	//TODO(tim): Need support for textured quads
 	//TODO(tim): Need to get fonts working for real
 
-	ZGLShaderError result = zgl_create_shader(&bs->ortho_col_shader, 
+	b32 result = zgl_create_shader(&bs->ortho_col_shader, 
 		"#version 420 core\n"
 		"precision mediump float;"
 		"layout (location = 0) in vec4 a_position;\n"
@@ -904,7 +903,7 @@ ZGLDEF void zgl_bs_initialize(ZGLBasicState *bs) {
 		"	o_colour = u_colour;\n"
 		"}\n");
 
-	if (result != ZGL_ERROR_NONE) {
+	if (!result) {
 		exit(EXIT_FAILURE);
 	}
 
@@ -930,6 +929,10 @@ ZGLDEF void zgl_bs_initialize(ZGLBasicState *bs) {
 		"}\n"
 	);
 
+	if (!result) {
+		exit(EXIT_FAILURE);
+	}
+
 	result =	zgl_create_shader(&bs->ortho_font_shader,
 		"#version 420 core\n"
 		"layout (location = 0) in vec4 a_position;\n"
@@ -952,7 +955,7 @@ ZGLDEF void zgl_bs_initialize(ZGLBasicState *bs) {
 		"}\n"
 	);
 
-	if (result != ZGL_ERROR_NONE) {
+	if (!result) {
 		exit(EXIT_FAILURE);
 	}
 

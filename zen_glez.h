@@ -232,7 +232,7 @@ static GLuint zglez_create_shader_program(const char* vs, const char* fs) {
 	glAttachShader(program_id, vsid);
 	glAttachShader(program_id, fsid);
 	glLinkProgram(program_id);
-
+	ZGLEZ_CHECK_ERROR();
 	glDeleteShader(vsid);
 	glDeleteShader(fsid);
 
@@ -276,6 +276,7 @@ static void zgles_create_points() {
 	points->projection = Matrix4x4();
 
 	points->program_id = zglez_create_shader_program(vs, fs);
+	glUseProgram(points->program_id);
 	points->projection_uniform = glGetUniformLocation(points->program_id, "projectionMatrix");
 	points->vertex_attribute = 0;
 	points->color_attribute = 1;
@@ -308,6 +309,7 @@ static void zgles_create_points() {
 	// Cleanup
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
+	glUseProgram(0);
 
 	points->count = 0;
 	
@@ -413,6 +415,7 @@ static void zglez_create_lines() {
 	lines->projection = Matrix4x4();
 
 	lines->program_id = zglez_create_shader_program(vs, fs);
+	glUseProgram(lines->program_id);
 	lines->projection_uniform = glGetUniformLocation(lines->program_id, "projectionMatrix");
 	lines->vertex_attribute = 0;
 	lines->color_attribute = 1;
@@ -439,6 +442,7 @@ static void zglez_create_lines() {
 	// Cleanup
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
+	glUseProgram(0);
 
 	lines->count = 0;
 	
@@ -538,6 +542,7 @@ static void zglez_create_triangles() {
 	triangles->projection = Matrix4x4();
 
 	triangles->program_id = zglez_create_shader_program(vs, fs);
+	glUseProgram(triangles->program_id);
 	triangles->projection_uniform = glGetUniformLocation(triangles->program_id, "projectionMatrix");
 	triangles->vertex_attribute = 0;
 	triangles->color_attribute = 1;
@@ -564,6 +569,7 @@ static void zglez_create_triangles() {
 	// Cleanup
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
+	glUseProgram(0);
 
 	triangles->count = 0;
 	
@@ -665,6 +671,7 @@ ZGLEZDEF void zglez_create_textures() {
 	tex->projection = Matrix4x4();
 
 	tex->program_id = zglez_create_shader_program(vs, fs);
+	glUseProgram(tex->program_id);
 	tex->projection_uniform = glGetUniformLocation(tex->program_id, "projectionMatrix");
 	tex->sampler_location = glGetUniformLocation(tex->program_id, "u_tex");
 	tex->vertex_attribute = 0;
@@ -692,6 +699,7 @@ ZGLEZDEF void zglez_create_textures() {
 	// Cleanup
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
+	glUseProgram(0);
 
 	tex->count = 0;
 
@@ -951,11 +959,11 @@ ZGLEZDEF void zglez_draw_circle(Vector3_t center, float radius, Colorf_t c, int 
 	float delta = 2.0f * M_PI / cast(float)steps;
 	float x = radius * cosf(0 * delta);
 	float y = radius * sinf(0 * delta);
-	Vector3_t V0 = Vector3(x, y, 0.0f);
+	Vector3_t V0 = Vector3(x, y, center.z);
 	for (int i = 1; i <= steps; ++i) {
 		x = radius * cosf(i * delta);
 		y = radius * sinf(i * delta);
-		Vector3_t V1 = Vector3(x, y, 0.0f);
+		Vector3_t V1 = Vector3(x, y, center.z);
 		zglez_draw_line(V0, V1, c);
 		V0 = V1;
 	}
@@ -970,12 +978,12 @@ void zglez_fill_circle(Vector3_t center, float radius, Colorf_t c, int steps, bo
 	zglez_triangles *tri = g_zglez_triangles;
 	float x = radius * cosf(0 * delta);
 	float y = radius * sinf(0 * delta);
-	Vector3_t V0 = Vector3(x, y, 0.0f);
+	Vector3_t V0 = Vector3(x, y, center.z);
 	Colorf_t color = blend ? c * 0.5f : c;
 	for (int i = 1; i <= steps; ++i) {
 		x = radius * cosf(i * delta);
 		y = radius * sinf(i * delta);
-		Vector3_t V1 = Vector3(x, y, 0.0f);
+		Vector3_t V1 = Vector3(x, y, center.z);
 		zglez_triangle_vertex(center, color);
 		zglez_triangle_vertex(V0, color);
 		zglez_triangle_vertex(V1, color);
@@ -985,11 +993,11 @@ void zglez_fill_circle(Vector3_t center, float radius, Colorf_t c, int steps, bo
 
 	x = radius * cosf(0 * delta);
 	y = radius * sinf(0 * delta);
-	V0 = Vector3(x, y, 0.0f);
+	V0 = Vector3(x, y, center.z);
 	for (int i = 1; i <= steps; ++i) {
 		x = radius * cosf(i * delta);
 		y = radius * sinf(i * delta);
-		Vector3_t V1 = Vector3(x, y, 0.0f);
+		Vector3_t V1 = Vector3(x, y, center.z);
 		zglez_draw_line(V0, V1, c);
 		V0 = V1;
 	}

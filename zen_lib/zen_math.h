@@ -175,6 +175,10 @@ ZMATHDEF Matrix3x3_t mul_mat3x3(Matrix3x3_t a, Matrix3x3_t b);
 ZMATHDEF Matrix4x4_t mul_mat4x4(Matrix4x4_t a, Matrix4x4_t b);
 
 
+ZMATHDEF Vector3_t mul_mat3x3_vec3(Matrix3x3_t m, Vector3_t v);
+ZMATHDEF Vector4_t mul_mat4x4_vec4(Matrix4x4_t m, Vector4_t v);
+
+
 ZMATHDEF Matrix3x3_t trans_mat3x3(Matrix3x3_t m, Vector2_t v);
 ZMATHDEF Matrix3x3_t rot_mat3x3(Matrix3x3_t m, float rad);
 ZMATHDEF Matrix3x3_t scale_mat3x3(Matrix3x3_t m, Vector2_t v);
@@ -184,6 +188,7 @@ ZMATHDEF Matrix4x4_t trans_mat4x4(Matrix4x4_t m, Vector3_t v);
 ZMATHDEF Matrix4x4_t rotx_mat4x4(Matrix4x4_t m, float rad);
 ZMATHDEF Matrix4x4_t roty_mat4x4(Matrix4x4_t m, float rad);
 ZMATHDEF Matrix4x4_t rotz_mat4x4(Matrix4x4_t m, float rad);
+ZMATHDEF Matrix4x4_t rotate_mat4x4(Matrix4x4_t m, Vector3_t rad);
 ZMATHDEF Matrix4x4_t scale_mat4x4(Matrix4x4_t m, Vector3_t v);
 ZMATHDEF int inverse_mat4x4(Matrix4x4_t mat, Matrix4x4_t *out);
 
@@ -260,123 +265,38 @@ zen_inline Vector3_t lerp(Vector3_t a, Vector3_t b, float t) {return (1.0f - t) 
 zen_inline Vector3_t cross(Vector3_t a, Vector3_t b) {return cross_vec3(a, b);}
 
 
-zen_inline Matrix2x2_t operator*(Matrix2x2_t a, Matrix2x2_t b) {
-	Matrix2x2_t out;
-	for (int32 i = 0; i < 2; ++i) {
-		for (int32 j = 0; j < 2; ++j) {
-			float f = 0.f;
-			for (int32 k = 0; k < 2; ++k) {
-				f += a.m[i*2+k] * b.m[k*2+j];
-			}
-			out.m[i*2+j] = f;
-		}
-	}
-	return out;
-}
+zen_inline Matrix2x2_t operator*(Matrix2x2_t a, Matrix2x2_t b) {return mul_mat2x2(a, b);}
+zen_inline Matrix3x3_t operator*(Matrix3x3_t a, Matrix3x3_t b) {return mul_mat3x3(a, b);}
+zen_inline Matrix4x4_t operator*(Matrix4x4_t a, Matrix4x4_t b) {return mul_mat4x4(a, b);}
+
+zen_inline Matrix2x2_t& operator*=(Matrix2x2_t &a, Matrix2x2_t b) {return a = a * b;}
+zen_inline Matrix3x3_t& operator*=(Matrix3x3_t &a, Matrix3x3_t b) {return a = a * b;}
+zen_inline Matrix4x4_t& operator*=(Matrix4x4_t &a, Matrix4x4_t b) {return a = a * b;}
+
+zen_inline Vector3_t operator*(Matrix3x3_t m, Vector3_t v) {return mul_mat3x3_vec3(m, v);}
+zen_inline Vector4_t operator*(Matrix4x4_t m, Vector4_t v) {return mul_mat4x4_vec4(m, v);}
+
+zen_inline Vector3_t& operator*=(Vector3_t &a, Matrix3x3_t b) {return a = b * a;}
+zen_inline Vector4_t& operator*=(Vector4_t &a, Matrix4x4_t b) {return a = b * a;}
 
 
-zen_inline Matrix3x3_t operator*(Matrix3x3_t a, Matrix3x3_t b) {
-	Matrix3x3_t out;
-	for (int32 i = 0; i < 3; ++i) {
-		for (int32 j = 0; j < 3; ++j) {
-			float f = 0.f;
-			for (int32 k = 0; k < 3; ++k) {
-				f += a.m[i*3+k] * b.m[k*3+j];
-			}
-			out.m[i*3+j] = f;
-		}
-	}
-	return out;
-}
+zen_inline Matrix3x3_t translate(Vector2_t v) {return trans_mat3x3(Matrix3x3(), v);}
+zen_inline Matrix3x3_t rotate2D(float rad) {return rot_mat3x3(Matrix3x3(), rad);}
+zen_inline Matrix3x3_t scale(Vector2_t v) {return scale_mat3x3(Matrix3x3_t(), v);}
 
 
-zen_inline Matrix4x4_t operator*(Matrix4x4_t a, Matrix4x4_t b) {
-	Matrix4x4_t out;
-	for (int32 i = 0; i < 4; ++i) {
-		for (int32 j = 0; j < 4; ++j) {
-			float f = 0.f;
-			for (int32 k = 0; k < 4; ++k) {
-				f += a.m[i*4+k] * b.m[k*4+j];
-			}
-			out.m[i*4+j] = f;
-		}
-	}
-	return out;
-}
-
-
-zen_inline Vector3_t operator*(Matrix3x3_t m, Vector3_t v) {
-	Vector3_t out;
-	for (int32 i = 0; i < 3; ++i) {
-		float f = 0.f;
-		for (int32 j = 0; j < 3; ++j) {
-			f += m.m[j*3+i] * v.e[j];
-		}
-		out.e[i] = f;
-	}
-	return out;
-}
-
-
-zen_inline Vector4_t operator*(Matrix4x4_t m, Vector4_t v) {
-	Vector4_t out;
-	for (int32 i = 0; i < 4; ++i) {
-		float f = 0.f;
-		for (int32 j = 0; j < 4; ++j) {
-			f += m.m[j*4+i] * v.e[j];
-		}
-		out.e[i] = f;
-	}
-	return out;
-}
-
-
-zen_inline Matrix3x3_t translate(Vector2_t v) {
-	Matrix3x3_t trans = Matrix3x3();
-	trans.m[6] = v.x;
-	trans.m[7] = v.y;
-	return trans;
-}
-
-
-zen_inline Matrix3x3_t rotate2D(float rad) {
-	Matrix3x3_t rot = Matrix3x3();
-	float c = cosf(rad);
-	float s = sinf(rad);
-	rot.m[0] = c;
-	rot.m[1] = s;
-	rot.m[3] = -s;
-	rot.m[4] = c;
-	return rot;
-}
-
-
-zen_inline Matrix3x3_t scale(Vector2_t v) {
-	Matrix3x3_t scale = Matrix3x3();
-	scale.m[0] = v.x;
-	scale.m[4] = v.y;
-	return scale;
-}
-
-
-zen_inline Matrix4x4_t translate(Vector3_t v) {
-	return trans_mat4x4(Matrix4x4(), v);
-}
-
-
-zen_inline Matrix4x4_t rotx(float rad) {
-	return rotx_mat4x4(Matrix4x4(), rad);
-}
-
-
-zen_inline Matrix4x4_t scale(Vector3_t v) {
-	return scale_mat4x4(Matrix4x4(), v);
-}
+zen_inline Matrix4x4_t translate(Vector3_t v) {return trans_mat4x4(Matrix4x4(), v);}
+zen_inline Matrix4x4_t rotx(float rad) {return rotx_mat4x4(Matrix4x4(), rad);}
+zen_inline Matrix4x4_t roty(float rad) {return roty_mat4x4(Matrix4x4(), rad);}
+zen_inline Matrix4x4_t rotz(float rad) {return rotz_mat4x4(Matrix4x4(), rad);}
+zen_inline Matrix4x4_t rotate(Vector3_t v) {return rotate_mat4x4(Matrix4x4(), v);}
+zen_inline Matrix4x4_t scale(Vector3_t v) {return scale_mat4x4(Matrix4x4(), v);}
 
 
 zen_inline void print(Vector2_t m) {print_vec2(m);}
 zen_inline void print(Vector3_t m) {print_vec3(m);}
 zen_inline void print(Vector4_t m) {print_vec4(m);}
+
 zen_inline void print(Matrix2x2_t m) {print_mat2x2(m);}
 zen_inline void print(Matrix3x3_t m) {print_mat3x3(m);}
 zen_inline void print(Matrix4x4_t m) {print_mat4x4(m);}
@@ -816,6 +736,13 @@ ZMATHDEF Matrix4x4_t rotz_mat4x4(Matrix4x4_t m, float rad) {
 	rot.m[5] = c;
 
 	return mul_mat4x4(m, rot);
+}
+
+
+ZMATHDEF Matrix4x4_t rotate_mat4x4(Matrix4x4_t m, Vector3_t rad) {
+	m = rotx_mat4x4(m, rad.x);
+	m = roty_mat4x4(m, rad.y);
+	return rotz_mat4x4(m, rad.z);
 }
 
 
