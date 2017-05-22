@@ -56,6 +56,68 @@ This does a conversion on the loaded data if
 format, channels, or freq do not match.  Hmmmm.  Channel count.  
 Missed that.
 
+------------------------------------------
+The convert thing is kind of dumb, but I think I get it.
+------------------------------------------
+
+
+SDL_AudioCVT cvt;
+
+int result = SDL_BuildAudioCVT(&cvt, src_fmt, src_channels, src_freq,
+dest_fmt, dest_channels, dest_freq);
+
+if (result == 1) Ready for conversion
+if (result == 0) No conversion needed
+if (result < 0) Error code. call SDL_GetError()
+
+cvt.len = channel.alen;
+cvt.buf = (Uint8 *) SDL_malloc(cvt.len * cvt.len_mult);
+SDL_memcpy(cvt.buf, channel.abuf, channel.alen);
+
+result = SDL_ConvertAudio(&cvt);
+if (result == 0) success
+if (result < 0) SDL_GetError();
+
+// Now cvt.buf has converted data of length cvt.len_cvt
+free(channel.abuf);
+channel.abuf = cvt.buf
+channel.alen = cvt.len_cvt;
+
+------------------------------------------
+------------------------------------------
+
+
+------------------------------------------
+How does the mixing actually work,
+and why not use it?
+------------------------------------------
+    case AUDIO_U16LSB:
+        {
+            Uint16 src1, src2;
+            int dst_sample;
+            const int max_audioval = 0xFFFF;
+
+            len /= 2;
+            while (len--) {
+                src1 = ((src[1]) << 8 | src[0]);
+                ADJUST_VOLUME(src1, volume);
+                src2 = ((dst[1]) << 8 | dst[0]);
+                src += 2;
+                dst_sample = src1 + src2;
+                if (dst_sample > max_audioval) {
+                    dst_sample = max_audioval;
+                }
+                dst[0] = dst_sample & 0xFF;
+                dst_sample >>= 8;
+                dst[1] = dst_sample & 0xFF;
+                dst += 2;
+            }
+        }
+        break;
+
+------------------------------------------
+------------------------------------------
+
 
 Maybe some more code review on the conversion stuff here...
     /* Build the audio converter and create conversion buffers */
@@ -69,7 +131,17 @@ Maybe some more code review on the conversion stuff here...
             SDL_free(chunk);
             return(NULL);
         }
+
+
+		  /*
+				I question if we even need the sample size here.  
+				Isn't the chunk->alen the size of the buffer?
+				Id chunk->alen is not bytes, the I guess, but
+				how is it not bytes?
+		  */
         samplesize = ((wavespec.format & 0xFF)/8)*wavespec.channels;
+		  // The wavecvt.len = number of samples (1024) * bytes per sample * num
+		  // of channels
         wavecvt.len = chunk->alen & ~(samplesize-1);
         wavecvt.buf = (Uint8 *)SDL_calloc(1, wavecvt.len*wavecvt.len_mult);
         if ( wavecvt.buf == NULL ) {
