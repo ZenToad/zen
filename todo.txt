@@ -1,287 +1,150 @@
--------------------------------------------------------
--- Sprite testing
--------------------------------------------------------
-#define ZEN_LIB_IMPLEMENTATION 
-#define ZEN_SDL_IMPLEMENTATION
-#define ZEN_GLEZ_IMPLEMENTATION
-#define STB_IMAGE_IMPLEMENTATION
-
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <signal.h>
-
-
-#include "glad/glad.h"
-#include <SDL.h>
-#include "stb_image.h"
- 
-  
-#include "zen/zen_lib.h"
-#include "zen/zen_sdl.h"
-#include "zen/zen_glez.h"
-
-
-typedef union Quad3_t {
-
-	Vector3_t v[4];
-	struct {
-		Vector3_t top_left;
-		Vector3_t bottom_left;
-		Vector3_t bottom_right;
-		Vector3_t top_right;
-	};
-
-} Quad3_t;
-
-
-Quad3_t Quad3(float x, float y, float w, float h) {
-
-	Quad3_t quad;
-	quad.top_left = Vector3(x, y, 1.0f);
-	quad.bottom_left = Vector3(x, y + h, 1.0f);
-	quad.bottom_right = Vector3(x + w, y + h, 1.0f);
-	quad.top_right = Vector3(x + w, y, 1.0f);
-	return quad;
-
-}
-
-typedef union Quad2_t {
-
-	Vector2_t v[4];
-	struct {
-		Vector2_t top_left;
-		Vector2_t bottom_left;
-		Vector2_t bottom_right;
-		Vector2_t top_right;
-	};
-
-} Quad2_t;
-
-
-Quad2_t Quad2(float x, float y, float w, float h) {
-
-	Quad2_t quad;
-	quad.top_left = Vector2(x, y);
-	quad.bottom_left = Vector2(x, y + h);
-	quad.bottom_right = Vector2(x + w, y + h);
-	quad.top_right = Vector2(x + w, y);
-	return quad;
-
-}
-
-
-typedef struct Sprite {
-
-	const char *name;
-	Quad3_t quad;
-	Quad3_t quad_copy;
-	Quad2_t texture_coords[64];
-	int sprite_index;
-
-	Transform2d_t transform;
-
-} Sprite;
-
-
-Sprite *create_sprite(const char *name, const char *filename) {
-
-	int w = 0, h = 0;
-	int flip = 0;
-	if (!zglez_load_texture_from_file(name, filename, &w, &h, flip)) {
-		return NULL;
-	}
-
-	float cellw = 1.0f / 8.0f;
-	float cellh = 1.0f / 8.0f;
-	Sprite *sprite = ZEN_CALLOC(Sprite, 1);
-	sprite->name = name;
-	sprite->sprite_index = 0;
-
-	sprite->transform = Transform2d(Vector2(0.0f, 0.0f), 0.0f, Vector2(1.0f, 1.0f));
-
-	sprite->quad = Quad3(-0.5f, +0.5f, 1.0f, -1.0f);
-	for (int i = 0; i < 64; ++i) {
-		int x = i % 8;
-		int y = i / 8;
-		sprite->texture_coords[i] = Quad2(cellw * x, cellh * y, cellw, cellh);
-	}
-
-	return sprite;
-}
-
-
-#define KEY_DOWN(SDL,KEY) SDL->keys[SDL_SCANCODE_##KEY]
-
-SDL_Zen *sdl;
-
-
-void draw_sprite(Sprite *sprite) {
-
-	Matrix3x3_t mat = Matrix3x3();
-	mat = mat * scale(sprite->transform.scale);
-	mat = mat * rotate2D(sprite->transform.rotation);
-	mat = mat * translate(sprite->transform.position);
-
-
-	for (int i = 0; i < 4; ++i) {
-		sprite->quad_copy.v[i] = mat * sprite->quad.v[i];
-	}
-
-	int index = sprite->sprite_index;
-	zglez_texture_quad(sprite->name, sprite->quad_copy.v, sprite->texture_coords[index].v);
-
-}
-
- 
-int main(int argc, char *argv[]) {
-
-	sdl = SDL_Zen_Create();
-
-	sdl->window_title = (char *)"SDL_Testing again...";
-	sdl->window_width = 1024;
-	sdl->window_height = 1024;
-	sdl->major_version = 4;
-	sdl->minor_version = 4;
-	sdl->window_background = 0xFF444444;
-
-	SDL_Zen_Init(sdl);
-	zglez_init();
-
-	ziout((SDL_BUTTON_LEFT));
-	ziout((SDL_BUTTON_MIDDLE));
-	ziout((SDL_BUTTON_RIGHT));
-
-	Vector3_t poly[] = {
-		Vector3(0.0f, 0.0f, 0.0f),
-		Vector3(0.0f, 0.5f, 0.0f),
-		Vector3(-0.5f, -0.5f, 0.0f),
-		Vector3(0.5f, -0.5f, 0.0f),
-	};
-
-	Vector3_t poly2[] = {
-		Vector3(0.0f, 0.0f, 0.0f),
-		Vector3(0.0f, 0.5f, 0.0f),
-		Vector3(-0.5f, -0.5f, 0.0f),
-		Vector3(0.5f, -0.5f, 0.0f),
-		Vector3(0.0f, 0.5f, 0.0f),
-	};
-
-
-	Sprite *sprite = create_sprite("poop", "./poopypoo.png");
-	GB_ASSERT_NOT_NULL(sprite);
-	sprite->transform.position = Vector2(-.7f, 0.7f);
-	sprite->transform.scale = Vector2(0.25f, 0.25f);
-
-	double change = 1.0f / 1.0f;
-	double delta_change = 0.0f;
-
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	while (SDL_Zen_IsRunning(sdl)) {
-		SDL_Zen_Begin(sdl);
-
-		if (MOUSE_DOWN(sdl, RIGHT)) zout("Right down");
-		if (MOUSE_DOWN_ONCE(sdl, LEFT)) zout("LEFT down");
-		sdl->should_close = KEY_DOWN(sdl, ESCAPE);
-
-		sprite->transform.rotation += M_PI * sdl->delta_time * 0.1;
-
-		zglez_draw_line(Vector3(-0.5f, 0.0f, 0.0f), Vector3(0.5f, 0.0f, 0.0f), COLORF_GREEN);
-		zglez_fill_circle(Vector3(0.0f, 0.0f, 0.0f), 0.5f, COLORF_RED);
-		zglez_fill_polygon(poly2, COLORF_BLUE, 5);
-			
-		delta_change += sdl->delta_time;
-		while (delta_change >= change) {
-			delta_change -= change;
-			sprite->sprite_index++;
-			if (sprite->sprite_index > 63)
-				sprite->sprite_index = 0;
-		}
-		draw_sprite(sprite);
-
-		zglez_flush();
-		SDL_Zen_End(sdl);
-	}
-
-	SDL_Zen_Quit(sdl);
-	zglez_quit();
-
-	SDL_Zen_Destroy(sdl);
-
-	return 0;
-
-}
--------------------------------------------------------
--- Sprite testing
--------------------------------------------------------
-
-
-this isn't working atm...
-void lets_try_hashmap() {
-
-	Hashmap *map = Hashmap_create(NULL, NULL);
-
-	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
-	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
-	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
-	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
-	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
-	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
-	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
-	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
-	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
-	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
-	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
-	Hashmap_set(map, gb_make_string("key1"), gb_make_string("value1"));
-
-	//zout("key1: %s", Hashmap_get(map, "key1"));
-	//zout("key3: %s", Hashmap_get(map, "key3"));
-
-
-	//char k[2] = {0};
-	//char v[2] = {0};
-	//for (int i = 0; i < 1024 * 1024; ++i) {
-		//gbString key = gb_make_string(0);
-		//gbString value = gb_make_string(0);
-		//int n = 3; //rand() % 8 + 1;
-		//int min = 33, max = 7;
-		//for (int j = 0; j < n; ++j) {
-			//k[0] = (rand() % max) + min;
-			//v[0] = (rand() % max) + min;
-			//key = gb_append_cstring(key, k);
-			//value = gb_append_cstring(value, v);
-		//}
-		//Hashmap_set(map, key, value);
-		////zout("key: %s, value: %s", key, value);
-	//}
-
-	zout("\nprint the map...\n");
-	Hashmap_traverse(map, print_map);
-
-	Hashmap_destroy(map);
-
-}
-
 --------------------------------------------------------------------------------
 TODO
 --------------------------------------------------------------------------------
 
-* fix the math library to add operator overloading and 
-  references if __cplusplus is defined
 
-* Update the box_2d debug drawing to use the zen_gl.h stuff
-
-* Update zen_gl.h to use the better caching from the box_2d
-  debug example
-
-* Can we add some C++ stuff to the libraries to make them
-  more usefull without taking away from the C part?
+--------------------------------------------------------------------------------
+sdl_mixer algorithm
+--------------------------------------------------------------------------------
 
 
+/* The internal format for an audio chunk */
+typedef struct Mix_Chunk {
+    int allocated; // 0 if not malloc, 1 if malloc (free or don't free)
+    Uint8 *abuf; // DUMB(abuf = audio_buffer) the audio data in memory
+    Uint32 alen; // DUMB(alen = audio_length) length of the buffer
+    Uint8 volume; // per sample volume       /* Per-sample volume, 0-128 */
+} Mix_Chunk;
+
+
+static struct _Mix_Channel {
+    Mix_Chunk *chunk; // the actual data
+    int playing; // set to Mix_Chunk.alen
+    int paused;  // 0 or 1
+    Uint8 *samples; // current pointer into chunk data
+    int volume;
+    int looping;
+    int tag;
+    Uint32 expire;
+    Uint32 start_time;
+    Mix_Fading fading;
+    int fade_volume;
+    int fade_volume_reset;
+    Uint32 fade_length;
+    Uint32 ticks_fade;
+    effect_info *effects;
+} *mix_channel = NULL;
+
+
+NOTE - 
+int Mix_OpenAudio(int frequency, Uint16 format, int nchannels, int chunksize)
+This is where SDL_mixer actually sets up the low-level audio stuff
+
+
+------------------------------------------
+LOAD WAV FILE
+------------------------------------------
+Mix_Chunk *Mix_LoadWAV_RW(SDL_RWops *src, int freesrc)
+
+This is the part of mixer that actually loads the wave file.
+A little confusing at because the load-wave file returns
+an SDL_AudioSpec pointer, and fill another SDL_AudioSpec with
+the format of the loaded file.  The returned pointer is just used
+for a null check to see if the load worked
+
+This does a conversion on the loaded data if
+format, channels, or freq do not match.  Hmmmm.  Channel count.  
+Missed that.
+
+
+Maybe some more code review on the conversion stuff here...
+    /* Build the audio converter and create conversion buffers */
+    if ( wavespec.format != mixer.format ||
+         wavespec.channels != mixer.channels ||
+         wavespec.freq != mixer.freq ) {
+        if ( SDL_BuildAudioCVT(&wavecvt,
+                wavespec.format, wavespec.channels, wavespec.freq,
+                mixer.format, mixer.channels, mixer.freq) < 0 ) {
+            SDL_free(chunk->abuf);
+            SDL_free(chunk);
+            return(NULL);
+        }
+        samplesize = ((wavespec.format & 0xFF)/8)*wavespec.channels;
+        wavecvt.len = chunk->alen & ~(samplesize-1);
+        wavecvt.buf = (Uint8 *)SDL_calloc(1, wavecvt.len*wavecvt.len_mult);
+        if ( wavecvt.buf == NULL ) {
+            SDL_SetError("Out of memory");
+            SDL_free(chunk->abuf);
+            SDL_free(chunk);
+            return(NULL);
+        }
+        SDL_memcpy(wavecvt.buf, chunk->abuf, chunk->alen);
+        SDL_free(chunk->abuf);
+
+        /* Run the audio converter */
+        if ( SDL_ConvertAudio(&wavecvt) < 0 ) {
+            SDL_free(wavecvt.buf);
+            SDL_free(chunk);
+            return(NULL);
+        }
+
+        chunk->abuf = wavecvt.buf;
+        chunk->alen = wavecvt.len_cvt;
+    }
+
+------------------------------------------
+QUESTIONS...
+------------------------------------------
+How the fuck does streaming from files work,
+and do we even care?
+
+
+? Is the playing value the number of samples left?
+? What is the channel.chuck for anyway? Seems like an internal 
+	audio chunk format,  i.e. the actually data pointer in the
+	channel.
+BUT - there is also a Uint8 *samples in the channel?  What is
+the difference?
+
+? How to actually mix current samples into output buffer?
+
+
+clear the buffer with silence
+loop through each channel
+if paused, drive on, else
+
+	if channel should expire
+		stop channel
+	
+	else if channel is fading
+		if channel done fading
+			set not fading
+			restore volume
+			if channel fading out
+				stop channel
+		else
+			if channel fading out
+				fade down
+			else
+				fade up	
+
+	if channel still playing
+		while channel has more samples and pos smaller than output buffer length
+		
+			calculate samples remaining in channel
+			calc volume as channel volume time channel chuck volume			
+			make sure at most output buffer length or remaining samples
+			process samples with any effects
+			mix processed samples into current output buffer
+			free effect samples if it was malloc
+
+
+
+
+--------------------------------------------------------------------------------
 audio Guy Somberg
---------------------------------------
+--------------------------------------------------------------------------------
+
 
 Output = A + B
 
