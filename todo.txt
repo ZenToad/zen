@@ -99,7 +99,7 @@ and why not use it?
 
             len /= 2;
             while (len--) {
-                src1 = ((src[1]) << 8 | src[0]);
+                src1 = ((src[1]) << 8 | src[0]); // because src is bytes
                 ADJUST_VOLUME(src1, volume);
                 src2 = ((dst[1]) << 8 | dst[0]);
                 src += 2;
