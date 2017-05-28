@@ -118,7 +118,8 @@ static void zen_imgui_create_font() {
 	// to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept 
 	// than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
 	__zen_imgui_default_font = io.Fonts->AddFontDefault();
-	__zen_imgui_custion_font = io.Fonts->AddFontFromFileTTF("res/PressStart2P.ttf", 16);
+	//@TODO: this shouldn't be hard-coded here
+	__zen_imgui_custion_font = io.Fonts->AddFontFromFileTTF("res/PressStart2P/PressStart2P.ttf", 16);
 
 	io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   
 
@@ -277,9 +278,9 @@ static void zen_imgui_setup_shaders() {
 		"	Out_Color = Frag_Color * texture( Texture, Frag_UV.st);\n"
 		"}\n";
 
-	ZGLShaderError result = zgl_create_shader(&__zen_imgui_state.zen_imgui_shader, vertex_shader, fragment_shader);
+	b32 result = zgl_create_shader(&__zen_imgui_state.zen_imgui_shader, vertex_shader, fragment_shader);
 
-	if (result != ZGL_ERROR_NONE) {
+	if (!result) {
 		exit(EXIT_FAILURE);
 	}
 
