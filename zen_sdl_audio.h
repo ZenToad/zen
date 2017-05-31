@@ -15,7 +15,7 @@
 #define ZEN_AUDIO_MAX_SOUNDS 			16
 #define ZEN_AUDIO_SYSTEM_CHANNELS	2
 #define ZEN_AUDIO_SYSTEM_FREQ			44100
-#define ZEN_AUDIO_SYSTEM_SAMPLES		2048
+#define ZEN_AUDIO_SYSTEM_SAMPLES		1024
 
 
 #if defined(__cplusplus)
@@ -35,6 +35,8 @@ struct ZenAudioSystem;
 
 ZAUDIODEF ZenAudioSystem *zen_audio_create();
 ZAUDIODEF void zen_audio_init(ZenAudioSystem *audio);
+ZAUDIODEF void zen_audio_turn_on(ZenAudioSystem *audio);
+ZAUDIODEF void zen_audio_turn_off(ZenAudioSystem *audio);
 ZAUDIODEF void zen_audio_shutdown(ZenAudioSystem *audio);
 ZAUDIODEF void zen_audio_destroy(ZenAudioSystem *audio);
 
@@ -283,7 +285,17 @@ ZAUDIODEF void zen_audio_init(ZenAudioSystem *audio) {
 }
 
 
-zen_sound *zen_audio_get_sound(ZenAudioSystem *audio, const char *name) {
+ZAUDIODEF void zen_audio_turn_on(ZenAudioSystem *audio) {
+	SDL_PauseAudioDevice(audio->id, 0);
+}
+
+
+ZAUDIODEF void zen_audio_turn_off(ZenAudioSystem *audio) {
+	SDL_PauseAudioDevice(audio->id, 1);
+}
+
+
+static zen_sound *zen_audio_get_sound(ZenAudioSystem *audio, const char *name) {
 
 	for (int i = 0; i < ZEN_AUDIO_MAX_SOUNDS; ++i) {
 		zen_sound *sound = &audio->sounds[i];
@@ -384,7 +396,8 @@ static void zen_audio_add_channel(ZenAudioSystem *audio, int channel_id, zen_sou
 			channel->loop_count = sound->looping ? -1 : 0;
 			channel->is_playing = 1;
 			channel->gain = dB_to_volume(volumedB);
-
+			zout("Channel Added");
+			zfout(channel->gain);
 			SDL_UnlockAudioDevice(audio->id);
 			return;
 		}
