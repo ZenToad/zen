@@ -157,7 +157,6 @@ typedef struct zglez_textures {
 	enum {max_vertices = 32 * 6};
 	Vector3_t vertices[max_vertices];
 	Vector2_t tex_coords[max_vertices];
-	Colorf_t colors[max_vertices];
 	int32 count;
 
 	Matrix4x4_t projection;

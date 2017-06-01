@@ -1,15 +1,18 @@
 #ifndef __ZEN_GLFW_H__
 #define __ZEN_GLFW_H__
 
+
 #ifdef ZEN_GLFW_STATIC
 #define ZGLFWDEF static
 #else
 #define ZGLFWDEF extern
 #endif
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif 
+
 
 #if defined(ZEN_LIB_DEV)
 #include "GLFW/glfw3.h"
@@ -18,6 +21,11 @@ extern "C" {
 #include "GLFW/glfw3native.h"
 #endif
 #endif
+
+
+#define ZGLFW_KEY_DOWN(glfw,key) glfw->keys[GLFW_KEY_##key]
+#define ZGLFW_KEY_DOWN_ONCE(glfw,key) glfw->keys[GLFW_KEY_##key] == 1
+
 
 typedef struct ZGLFW {
 
@@ -67,56 +75,26 @@ typedef struct ZGLFW {
 
 } ZGLFW;
 
+
+ZGLFWDEF ZGLFW *zglfw_create(const char *title, int width, int height, int major = 4, int minor = 4);
 ZGLFWDEF void zglfw_init(ZGLFW *glfw);
 ZGLFWDEF void zglfw_show_window(ZGLFW *glfw);
 ZGLFWDEF int zglfw_is_running(ZGLFW *glfw);
 ZGLFWDEF void zglfw_begin(ZGLFW *glfw);
 ZGLFWDEF void zglfw_end(ZGLFW *glfw);
 ZGLFWDEF void zglfw_quit(ZGLFW *glfw);
+ZGLFWDEF void zglfw_destroy(ZGLFW *glfw);
+
 
 #ifdef __cplusplus
 }
 #endif 
 
 
-#ifdef __cplusplus
-class ZenGlfw {
-
-public:
-	
-	ZenGlfw() {
-		glfw = {0};
-		ptr = &glfw;
-	}
-
-	void defaults(int w, int h, const char *title) {
-		glfw.window_title = title;
-		glfw.major_version = 4;
-		glfw.minor_version = 4;
-		glfw.window_width = w;
-		glfw.window_height = h;
-		glfw.window_cursor_mode = GLFW_CURSOR_NORMAL;
-		glfw.window_background = 0xFF333333;
-	}
-
-	virtual ~ZenGlfw() { }
-
-	void init();
-	void showWindow();
-	int isRunning();
-	void begin();
-	void end();
-	void quit();
-
-	ZGLFW glfw;
-	ZGLFW *ptr;
-
-};
-
-#endif // CPP extra stuff
-
 
 #endif //__ZEN_GLFW_H__
+
+
 
 //------------------------------------------ 
 // Implementation
@@ -124,17 +102,21 @@ public:
 //
 #if defined(ZEN_GLFW_IMPLEMENTATION) || defined(ZEN_LIB_DEV) 
 
+
 #if defined(ZEN_LIB_DEV)
 #include <stdio.h>
-#include "zen.h"
+#include "zen_lib/zen.h"
 #endif
  
+
 typedef void* (* GLADloadproc)(const char *name);
 int gladLoadGLLoader(GLADloadproc load);
+
 
 static void zglfw_default_error_callback(int, const char *description) {
    fprintf(stderr, "Error: %s\n", description);
 }
+
 
 static void zglfw_default_key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
 	ZGLFW *glfw = (ZGLFW *)glfwGetWindowUserPointer(window);
@@ -147,13 +129,16 @@ static void zglfw_default_key_callback(GLFWwindow *window, int key, int scancode
 	}
 }
 
+
 static void zglfw_default_window_size_callback(GLFWwindow*, int width, int height) {
 	glViewport(0, 0, width, height);
 }
 
+
 static void zglfw_default_character_callback(GLFWwindow*, unsigned int character) {
 	zout("Types: %c", character);
 }
+
 
 static void zglfw_default_mouse_button_callback(GLFWwindow *window, int button, int action, int) {
 	ZGLFW *glfw = (ZGLFW *)glfwGetWindowUserPointer(window);
@@ -165,12 +150,38 @@ static void zglfw_default_mouse_button_callback(GLFWwindow *window, int button, 
 	}
 }
 
+
 static void zglfw_default_scroll_callback(GLFWwindow *window, double /*xoffset*/, double yoffset) {
 	ZGLFW *glfw = (ZGLFW *)glfwGetWindowUserPointer(window);
 	if (glfw) {
 		glfw->mouse_scroll += yoffset;
 	}
 }
+
+
+ZGLFWDEF ZGLFW *zglfw_create(const char *title, int width, int height, int major, int minor) {
+
+
+	ZGLFW *glfw = ZEN_CALLOC(ZGLFW, 1);
+	GB_ASSERT_NOT_NULL(glfw);
+
+	glfw->window_title = title;
+	glfw->major_version = major;
+	glfw->minor_version = minor;
+	glfw->window_width = width;
+	glfw->window_height = height;
+	glfw->window_background = 0xFF333333;
+	glfw->window_cursor_mode = GLFW_CURSOR_NORMAL;
+
+	return glfw;
+
+}
+
+
+ZGLFWDEF void zglfw_destroy(ZGLFW *glfw) {
+	free(glfw);
+}
+
 
 ZGLFWDEF void zglfw_init(ZGLFW *glfw) {
 
@@ -247,14 +258,17 @@ ZGLFWDEF void zglfw_init(ZGLFW *glfw) {
 
 }
 
+
 ZGLFWDEF void zglfw_show_window(ZGLFW *glfw) {
 	glfwShowWindow(glfw->window);
 }
+
 
 ZGLFWDEF int zglfw_is_running(ZGLFW *glfw) {
    int should_close = glfw->should_close || glfwWindowShouldClose(glfw->window);
    return !should_close;
 }
+
 
 ZGLFWDEF void zglfw_begin(ZGLFW *glfw) {
 
@@ -292,6 +306,7 @@ ZGLFWDEF void zglfw_begin(ZGLFW *glfw) {
 
 }
 
+
 ZGLFWDEF void zglfw_end(ZGLFW *glfw) {
 
 	for (int i = 32; i < GLFW_KEY_LAST; ++i) {
@@ -311,6 +326,7 @@ ZGLFWDEF void zglfw_end(ZGLFW *glfw) {
    glfwSwapBuffers(glfw->window);
 }
 
+
 ZGLFWDEF void zglfw_quit(ZGLFW *glfw) {
 	int ms = (int)(1.0e3 * glfw->total_time / glfw->total_frames);
 	zout("\n%d (ms)\n", ms);
@@ -318,34 +334,6 @@ ZGLFWDEF void zglfw_quit(ZGLFW *glfw) {
 	glfwTerminate();
 }
 
-#ifdef __cplusplus
-
-void ZenGlfw::init() {
-	zglfw_init(ptr);
-}
-
-void ZenGlfw::showWindow() {
-	zglfw_show_window(ptr);
-}
-
-int ZenGlfw::isRunning() {
-	return zglfw_is_running(ptr);
-}
-
-void ZenGlfw::begin() {
-	zglfw_begin(ptr);
-}
-
-void ZenGlfw::end() {
-	zglfw_end(ptr);
-}
-
-void ZenGlfw::quit() {
-	zglfw_quit(ptr);
-}
-
-
-#endif // cpp stuff
 
 #endif // ZEN_GLFW_IMPLEMENTATION
 
