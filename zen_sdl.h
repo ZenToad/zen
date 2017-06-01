@@ -75,6 +75,7 @@ typedef struct SDL_Zen {
 
 ZSDL_DEF SDL_Zen *SDL_Zen_Create();
 ZSDL_DEF void SDL_Zen_Init(SDL_Zen *sdl);
+ZSDL_DEF void SDL_Zen_ShowWindow(SDL_Zen *sdl);
 ZSDL_DEF int SDL_Zen_IsRunning(SDL_Zen *sdl);
 ZSDL_DEF void SDL_Zen_Begin(SDL_Zen *sdl);
 ZSDL_DEF void SDL_Zen_End(SDL_Zen *sdl);
@@ -117,6 +118,7 @@ void SDL_Zen_Init(SDL_Zen *sdl) {
 
 
 	// Initialize SDL 
+	//if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
 		sdl_die("Couldn't initialize SDL");
 
@@ -133,7 +135,7 @@ void SDL_Zen_Init(SDL_Zen *sdl) {
 	// Create the window
 	sdl->window = SDL_CreateWindow( sdl->window_title, 
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
-		sdl->window_width, sdl->window_height, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL
+		sdl->window_width, sdl->window_height, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN | SDL_WINDOW_OPENGL
 	);
 	if (sdl->window == NULL) 
 		sdl_die("Couldn't set video mode");
@@ -177,6 +179,11 @@ void SDL_Zen_Init(SDL_Zen *sdl) {
 
 	SDL_StartTextInput();
 
+}
+
+
+ZSDL_DEF void SDL_Zen_ShowWindow(SDL_Zen *sdl) {
+	SDL_ShowWindow(sdl->window);
 }
 
 

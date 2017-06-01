@@ -1,17 +1,82 @@
-#include <SDL.h>
-#include <signal.h>
-#include "zen_lib.h"
+// Some docs will go here
+//
+// license info here
+
+#if !defined(__ZEN_SDL_AUDIO_H__)
+#define __ZEN_SDL_AUDIO_H__
 
 
-#if !defined(MAX_AUDIO_CHANNELS)
-#define MAX_AUDIO_CHANNELS 16
+#if defined(ZEN_LIB_DEV)
+#include "zen/zen_lib.h"
 #endif
 
 
-#if !defined(MAX_AUDIO_SOUNDS)
-#define MAX_AUDIO_SOUNDS 16
+#define ZEN_AUDIO_MAX_CHANNELS 		16
+#define ZEN_AUDIO_MAX_SOUNDS 			16
+#define ZEN_AUDIO_SYSTEM_CHANNELS	2
+#define ZEN_AUDIO_SYSTEM_FREQ			44100
+#define ZEN_AUDIO_SYSTEM_SAMPLES		1024
+
+
+#if defined(__cplusplus)
+extern "C" {
 #endif
 
+
+#if defined(ZEN_AUDIO_STATIC)
+#define ZAUDIODEF static
+#else
+#define ZAUDIODEF extern
+#endif
+
+
+struct ZenAudioSystem;
+
+
+ZAUDIODEF ZenAudioSystem *zen_audio_create();
+ZAUDIODEF void zen_audio_init(ZenAudioSystem *audio);
+ZAUDIODEF void zen_audio_turn_on(ZenAudioSystem *audio);
+ZAUDIODEF void zen_audio_turn_off(ZenAudioSystem *audio);
+ZAUDIODEF void zen_audio_shutdown(ZenAudioSystem *audio);
+ZAUDIODEF void zen_audio_destroy(ZenAudioSystem *audio);
+
+
+ZAUDIODEF float dB_to_volume(float dB);
+ZAUDIODEF float volume_to_dB(float volume);
+
+
+ZAUDIODEF void zen_audio_load_sound(ZenAudioSystem *audio, const char *sound_name, bool looping = false);
+ZAUDIODEF void zen_audio_unload_sound(ZenAudioSystem *audio, const char *sound_name);
+ZAUDIODEF uint32 zen_audio_play_sound(ZenAudioSystem *audio, const char *sound_name, float volumedB = 0.0f);
+ZAUDIODEF void zen_audio_stop_channel(ZenAudioSystem *audio, uint32 channel_id);
+ZAUDIODEF void zen_audio_stop_all_channels(ZenAudioSystem *audio);
+ZAUDIODEF void zen_audio_set_channel_volume(ZenAudioSystem *engine, uint32 channel_id, float volumedB);
+ZAUDIODEF bool zen_audio_is_playing(ZenAudioSystem *engine, uint32 channel_id);
+
+
+#if defined(__cplusplus)
+}
+#endif
+
+
+#endif // __ZEN_SDL_AUDIO_H__
+
+
+//------------------------------------------ 
+//
+//
+// Implementation
+//
+//------------------------------------------
+#if defined(ZEN_SDL_AUDIO_IMPLEMENTATION) || defined(ZEN_LIB_DEV)
+
+
+#if defined(ZEN_LIB_DEV)
+#include <string.h>
+#include "SDL.h"
+
+#include <zen/zen_lib.h>
+#endif
 
 typedef struct zen_sound {
 
@@ -19,6 +84,7 @@ typedef struct zen_sound {
 	const char *name;
 	float *audio_data;
 	int sample_count;
+	bool looping;
 
 } zen_sound;
 
@@ -32,7 +98,6 @@ enum FADE_TYPE {
 
 typedef struct zen_channel {
 
-	int in_use;
 	uint32 id;
 	zen_sound *sound;
 
@@ -59,7 +124,7 @@ typedef struct zen_channel {
 } zen_channel;
 
 
-typedef struct AudioSystem {
+typedef struct ZenAudioSystem {
 
 	SDL_AudioSpec mixer;
 	SDL_AudioDeviceID id;
@@ -67,15 +132,14 @@ typedef struct AudioSystem {
 	uint32 next_channel_id;
 	float gain;
 
-	zen_sound sounds[MAX_AUDIO_SOUNDS];
-	zen_channel channels[MAX_AUDIO_CHANNELS];
+	zen_sound sounds[ZEN_AUDIO_MAX_SOUNDS];
+	zen_channel channels[ZEN_AUDIO_MAX_CHANNELS];
 
 
-} AudioSystem;
+} ZenAudioSystem;
 
 
-
-void reset_channel(zen_channel *channel) {
+static void zen_audio_reset_channel(zen_channel *channel) {
 
 	channel->fade_type = NOT_FADING;
 	channel->right_pan = 1.0f;
@@ -84,24 +148,12 @@ void reset_channel(zen_channel *channel) {
 	channel->expire = 0;
 	channel->loop_count = 0;
 	channel->is_playing = 0;
-	channel->position = 0.0f;
 	channel->advance = 1.0f;
 
 }
 
 
-void stop_channel(zen_channel *channel) {
-
-	channel->position = 0;
-	channel->is_playing = 0;
-	channel->fade_type = NOT_FADING;
-	channel->expire = 0;
-	channel->loop_count = 0;
-
-}
-
-
-void mix_audio_stream(AudioSystem *audio, zen_channel *c, float **out_buffer, int output_sample_count) {
+static void mix_audio_stream(ZenAudioSystem *audio, zen_channel *c, float **out_buffer, int output_sample_count) {
 
 
 	float *out = *out_buffer;
@@ -115,7 +167,6 @@ void mix_audio_stream(AudioSystem *audio, zen_channel *c, float **out_buffer, in
 	float right_gain = audio->gain * c->gain * c->right_pan;
 
 	while (output_sample < output_sample_count) {
-
 
 		int index = c->position * channels;
 		float left = in[index] * left_gain;
@@ -136,23 +187,20 @@ void mix_audio_stream(AudioSystem *audio, zen_channel *c, float **out_buffer, in
 				c->loop_count--;
 				c->position = 0;
 			} else {
-				stop_channel(c);
+				c->is_playing = 0;
 				return;
 			} 
 		}
-
-
 	}
-
 
 }
 
 
-void mix_channel(AudioSystem *audio, zen_channel *c, uint32 sdl_ticks, float **out_buffer, int out_sample_count) {
+static void mix_channel(ZenAudioSystem *audio, zen_channel *c, uint32 sdl_ticks, float **out_buffer, int out_sample_count) {
 
 
 	if (c->expire > 0 && c->expire < sdl_ticks) {
-		stop_channel(c);
+		c->is_playing = 0;
 		return;
 	}
 
@@ -162,7 +210,7 @@ void mix_channel(AudioSystem *audio, zen_channel *c, uint32 sdl_ticks, float **o
 		if (ticks < c->fade_length) {
 			c->gain = c->fade_volume_reset;
 			if (c->fade_type == FADE_OUT) {
-				stop_channel(c);
+				c->is_playing = 0;
 				return;
 			} 
 			c->fade_type = NOT_FADING;
@@ -180,11 +228,11 @@ void mix_channel(AudioSystem *audio, zen_channel *c, uint32 sdl_ticks, float **o
 }
 
 
-void zen_audio_callback(void *userdata, uint8 *output, int len) {
+static void zen_audio_callback(void *userdata, uint8 *output, int len) {
 
 
 	GB_ASSERT_NOT_NULL(userdata);
-	AudioSystem *audio = (AudioSystem *)userdata;
+	ZenAudioSystem *audio = (ZenAudioSystem *)userdata;
 	SDL_memset(output, audio->mixer.silence, len);
 
 
@@ -193,8 +241,8 @@ void zen_audio_callback(void *userdata, uint8 *output, int len) {
 	int sample_count = len / (zen_sizeof(float) * audio->mixer.channels);
 
 
-	for (int i = 0; i < MAX_AUDIO_CHANNELS; ++i) {
-		if (audio->channels[i].in_use && audio->channels[i].is_playing) {
+	for (int i = 0; i < ZEN_AUDIO_MAX_CHANNELS; ++i) {
+		if (audio->channels[i].is_playing) {
 			mix_channel(audio, &audio->channels[i], ticks, &output_buffer, sample_count);	
 		}
 	}
@@ -203,9 +251,53 @@ void zen_audio_callback(void *userdata, uint8 *output, int len) {
 }
 
 
-zen_sound *audio_get_sound(AudioSystem *audio, const char *name) {
+ZAUDIODEF ZenAudioSystem *zen_audio_create() {
 
-	for (int i = 0; i < MAX_AUDIO_SOUNDS; ++i) {
+	ZenAudioSystem *audio = (ZenAudioSystem *)SDL_malloc(zen_sizeof(ZenAudioSystem));
+	GB_ASSERT_NOT_NULL(audio);
+	return audio;
+
+}
+
+
+ZAUDIODEF void zen_audio_init(ZenAudioSystem *audio) {
+
+	audio->gain = 1.0f;
+	for (int i = 0; i < ZEN_AUDIO_MAX_CHANNELS; ++i) {
+		SDL_zero(audio->channels[i]);
+		zen_audio_reset_channel(&audio->channels[i]);
+	}
+
+
+	SDL_AudioSpec want;
+	want.channels = ZEN_AUDIO_SYSTEM_CHANNELS;
+	want.freq = ZEN_AUDIO_SYSTEM_FREQ;
+	want.format = AUDIO_F32;
+	want.callback = zen_audio_callback;
+	want.userdata = audio;
+	want.samples = ZEN_AUDIO_SYSTEM_SAMPLES;
+
+	audio->id = SDL_OpenAudioDevice(NULL, 0, &want, &audio->mixer, 0);
+
+	GB_ASSERT_MSG(audio->id, "Couldn't open audio device");
+	GB_ASSERT_MSG(want.format == audio->mixer.format, "Couldn't get correct format");
+
+}
+
+
+ZAUDIODEF void zen_audio_turn_on(ZenAudioSystem *audio) {
+	SDL_PauseAudioDevice(audio->id, 0);
+}
+
+
+ZAUDIODEF void zen_audio_turn_off(ZenAudioSystem *audio) {
+	SDL_PauseAudioDevice(audio->id, 1);
+}
+
+
+static zen_sound *zen_audio_get_sound(ZenAudioSystem *audio, const char *name) {
+
+	for (int i = 0; i < ZEN_AUDIO_MAX_SOUNDS; ++i) {
 		zen_sound *sound = &audio->sounds[i];
 		if (sound->is_loaded && (strcmp(sound->name, name) == 0)) {
 			return sound;	
@@ -217,23 +309,188 @@ zen_sound *audio_get_sound(AudioSystem *audio, const char *name) {
 }
 
 
-void audio_add_sound(AudioSystem *audio, const char *name, float *audio_buf, int sample_count) {
+ZAUDIODEF void zen_audio_unload_sound(ZenAudioSystem *audio, const char *sound_name) {
 
-	for (int i = 0; i < MAX_AUDIO_SOUNDS; ++i) {
+	zen_sound *sound = zen_audio_get_sound(audio, sound_name);
+	if (sound == NULL)
+		return; // not loaded
+
+
+	// stop any channels playing the sound
+	for (int i = 0; i < ZEN_AUDIO_MAX_CHANNELS; ++i) {
+		zen_channel *channel = &audio->channels[i];
+		if (channel->is_playing && channel->sound == sound) {
+			SDL_LockAudioDevice(audio->id);
+			channel->is_playing = 0;
+			SDL_UnlockAudioDevice(audio->id);
+		}
+	}
+
+	sound->is_loaded = 0;
+	SDL_free(sound->audio_data);
+	sound->audio_data = NULL;
+
+}
+
+
+ZAUDIODEF void zen_audio_shutdown(ZenAudioSystem *audio) {
+
+	if (audio == NULL)
+		return;
+
+	SDL_PauseAudioDevice(audio->id, 1);
+
+	for (int i = 0; i < ZEN_AUDIO_MAX_SOUNDS; ++i) {
+		audio->sounds[i].is_loaded = 0;
+		SDL_free(audio->sounds[0].audio_data);
+		audio->sounds[i].audio_data = NULL;
+	}
+
+	SDL_CloseAudioDevice(audio->id);
+
+}
+
+
+ZAUDIODEF void zen_audio_destroy(ZenAudioSystem *audio) {
+	SDL_free(audio);
+}
+
+
+ZAUDIODEF float dB_to_volume(float dB) {
+	return powf(10.0f, 0.05f * dB);
+}
+
+
+ZAUDIODEF float volume_to_dB(float volume) {
+	return 20.0f * log10f(volume);
+}
+
+
+
+static void zen_audio_add_sound(ZenAudioSystem *audio, const char *name, float *audio_buf, int sample_count, bool looping) {
+
+	for (int i = 0; i < ZEN_AUDIO_MAX_SOUNDS; ++i) {
 		if (!audio->sounds[i].is_loaded) {
 			audio->sounds[i].is_loaded = 1;
 			audio->sounds[i].name = name;
 			audio->sounds[i].audio_data = audio_buf;
 			audio->sounds[i].sample_count = sample_count;
+			audio->sounds[i].looping = looping;
+			return;
 		}
 	}
 
 }
 
 
-void audio_load_sound(AudioSystem *audio, const char *name) {
+static void zen_audio_add_channel(ZenAudioSystem *audio, int channel_id, zen_sound *sound, float volumedB) {
 
-	zen_sound *sound = audio_get_sound(audio, name);
+	for (int i = 0; i < ZEN_AUDIO_MAX_CHANNELS; ++i) {
+		zen_channel *channel = &audio->channels[i];
+		if (!channel->is_playing) {
+			SDL_LockAudioDevice(audio->id);
+
+			zen_audio_reset_channel(channel);
+			channel->sound = sound;
+			channel->id = channel_id;
+			channel->loop_count = sound->looping ? -1 : 0;
+			channel->is_playing = 1;
+			channel->gain = dB_to_volume(volumedB);
+			zout("Channel Added");
+			zfout(channel->gain);
+			SDL_UnlockAudioDevice(audio->id);
+			return;
+		}
+	}
+
+}
+
+
+ZAUDIODEF uint32 zen_audio_play_sound(ZenAudioSystem *audio, const char *sound_name, float volumedB) {
+
+	uint32 channel_id = audio->next_channel_id++;
+	zen_sound *sound = zen_audio_get_sound(audio, sound_name);
+	if (sound == NULL) {
+		zen_audio_load_sound(audio, sound_name);
+		sound = zen_audio_get_sound(audio, sound_name);
+		if (sound == NULL) {
+			return channel_id;
+		}
+	}
+
+	zen_audio_add_channel(audio, channel_id, sound, volumedB);
+
+	return channel_id;
+
+}
+
+
+static zen_channel *zen_audio_find_channel(ZenAudioSystem *audio, uint32 channel_id) {
+
+	for (int i = 0; i < ZEN_AUDIO_MAX_CHANNELS; ++i) {
+		zen_channel *channel = &audio->channels[i];
+		if (channel->id == channel_id) {
+			return channel;
+		}
+	}
+
+	return NULL;
+
+}
+
+
+ZAUDIODEF void zen_audio_stop_channel(ZenAudioSystem *audio, uint32 channel_id) {
+
+	zen_channel *channel = zen_audio_find_channel(audio, channel_id);
+	if (channel) {
+		SDL_LockAudioDevice(audio->id);
+		channel->is_playing = 0;
+		SDL_UnlockAudioDevice(audio->id);
+	}
+
+}
+
+
+ZAUDIODEF void zen_audio_stop_all_channels(ZenAudioSystem *audio) {
+
+	SDL_LockAudioDevice(audio->id);
+	for (int i = 0; i < ZEN_AUDIO_MAX_CHANNELS; ++i) {
+		audio->channels[i].is_playing = 0;
+	}
+	SDL_UnlockAudioDevice(audio->id);
+
+}
+
+
+ZAUDIODEF void zen_audio_set_channel_volume(ZenAudioSystem *audio, uint32 channel_id, float volumedB) {
+
+	zen_channel *channel = zen_audio_find_channel(audio, channel_id);
+	if (channel) {
+		SDL_LockAudioDevice(audio->id);
+		channel->gain = dB_to_volume(volumedB);
+		SDL_UnlockAudioDevice(audio->id);
+	}
+
+}
+
+
+ZAUDIODEF bool zen_audio_is_playing(ZenAudioSystem *audio, uint32 channel_id) {
+	
+	bool is_playing = false;
+	zen_channel *channel = zen_audio_find_channel(audio, channel_id);
+	if (channel) {
+		SDL_LockAudioDevice(audio->id);
+		is_playing = channel->is_playing;
+		SDL_UnlockAudioDevice(audio->id);
+	}
+	return is_playing;
+
+}
+
+
+ZAUDIODEF void zen_audio_load_sound(ZenAudioSystem *audio, const char *sound_name, bool looping) {
+
+	zen_sound *sound = zen_audio_get_sound(audio, sound_name);
 	if (sound) {
 		return; // already loaded
 	}
@@ -242,7 +499,8 @@ void audio_load_sound(AudioSystem *audio, const char *name) {
 	SDL_AudioSpec wav_spec;
 	uint8 *audio_buf = 0;
 	uint32 audio_len = 0;
-	GB_ASSERT_NOT_NULL(SDL_LoadWAV(name, &wav_spec, &audio_buf, &audio_len));
+	GB_ASSERT_MSG(SDL_LoadWAV(sound_name, &wav_spec, &audio_buf, &audio_len),
+			"Error loading %s: %s", sound_name, SDL_GetError());
 
 
 	SDL_AudioCVT cvt;
@@ -265,7 +523,7 @@ void audio_load_sound(AudioSystem *audio, const char *name) {
 
 	float *audio_data = (float *)cvt.buf;
 	int sample_count = cvt.len_cvt / (zen_sizeof(float) * mix->channels);
-	audio_add_sound(audio, name, audio_data, sample_count);
+	zen_audio_add_sound(audio, sound_name, audio_data, sample_count, looping);
 
 
 	SDL_FreeWAV(audio_buf);
@@ -273,126 +531,11 @@ void audio_load_sound(AudioSystem *audio, const char *name) {
 
 }
 
-void audio_add_channel(AudioSystem *audio, int channel_id, zen_sound *sound, int loop_count) {
-
-	for (int i = 0; i < MAX_AUDIO_CHANNELS; ++i) {
-		zen_channel *channel = &audio->channels[i];
-		if (!channel->in_use) {
-			SDL_LockAudioDevice(audio->id); {
-
-				reset_channel(channel);
-				channel->sound = sound;
-				channel->id = channel_id;
-				channel->loop_count = loop_count;
-
-			} SDL_UnlockAudioDevice(audio->id);
-		}
-	}
-
-}
 
 
-int audio_play_sound(AudioSystem *audio, const char *name, int loop_count) {
- 
-	int channel_id = audio->next_channel_id++;
-	zen_sound *sound = audio_get_sound(audio, name);
-	if (!sound) {
-		audio_load_sound(audio, name);
-		sound = audio_get_sound(audio, name);
-		if (!sound) {
-			return channel_id;
-		}
-	}
+#endif // ZEN_SDL_AUDIO_IMPLEMENTATION
 
-	audio_add_channel(audio, channel_id, sound, loop_count);
-
-	return channel_id;
-
-}
-
-
-AudioSystem *create_audio_system() {
-
-	AudioSystem *audio = (AudioSystem *)SDL_malloc(zen_sizeof(AudioSystem));
-	GB_ASSERT_NOT_NULL(audio);
-
-	audio->gain = 1.0f;
-	for (int i = 0; i < MAX_AUDIO_CHANNELS; ++i) {
-		reset_channel(&audio->channels[i]);
-	}
-
-
-	SDL_AudioSpec want;
-	want.channels = 2;
-	want.freq = 44100;
-	want.format = AUDIO_F32;
-	want.callback = zen_audio_callback;
-
-	audio->id = SDL_OpenAudioDevice(NULL, 0, &want, &audio->mixer, 0);
-
-	GB_ASSERT_MSG(audio->id, "Couldn't open audio device");
-	GB_ASSERT_MSG(want.format == audio->mixer.format, "Couldn't get correct format");
-
-	return audio;
-
-}
-
-
-int audio_is_playing(AudioSystem *audio, uint32 channel_id) {
-
-	for (int i = 0; i < MAX_AUDIO_CHANNELS; ++i) {
-		if (audio->channels[i].id == channel_id) {
-			return audio->channels[i].is_playing;
-		}
-	}
-
-	return 0;
-
-}
-
-void destroy_audio_system(AudioSystem *audio) {
-
-	if (audio == NULL)
-		return;
-
-	for (int i = 0; i < MAX_AUDIO_SOUNDS; ++i) {
-		if (audio->sounds[i].audio_data) {
-			SDL_free(audio->sounds[i].audio_data);
-		}
-	}
-
-	SDL_CloseAudioDevice(audio->id);
-	SDL_free(audio);
-
-}
-
-
-int main(int argc char *argv[]){
-
-	if (SDL_Init(SDL_INIT_AUDIO) != 0) {
-		GB_PANIC("Unable to init SDL: %s", SDL_GetError());
-	}
-
-	AudioSystem *audio = create_audio_system();
-	GB_ASSERT_NOT_NULL(audio);
-
-	audio_load_sound(audio, "path/to/file1");
-	audio_load_sound(audio, "path/to/file2");
-	audio_load_sound(audio, "path/to/file3");
-
-
-	SDL_PauseAudioDevice(audio->id, 0);
-
-	uint32 sound1 = audio_play_sound(audio, "path/to/file1", 2);
-	uint32 sound1 = audio_play_sound(audio, "path/to/file1", 2);
-	uint32 sound1 = audio_play_sound(audio, "path/to/file1", 2);
-
-	
-
-	destroy_audio_system(audio);
-	SDL_Quit();
-
-	return 0;
-
-}
-
+// full license here
+//
+//
+//
