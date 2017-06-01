@@ -1,411 +1,364 @@
 --------------------------------------------------------------------------------
 TODO
 --------------------------------------------------------------------------------
+#define ZEN_LIB_IMPLEMENTATION
+#define ZEN_GLFW_IMPLEMENTATION
+#define ZEN_GLEZ_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_RECT_PACK_IMPLEMENTATION
+#define STB_TRUETYPE_IMPLEMENTATION
 
 
---------------------------------------------------------------------------------
-sdl_mixer algorithm
---------------------------------------------------------------------------------
+#include <sys/stat.h>
+#include "glad/glad.h"
+#include "GLFW/glfw3.h"
+#include "stb_image.h"
 
 
-/* The internal format for an audio chunk */
-typedef struct Mix_Chunk {
-    int allocated; // 0 if not malloc, 1 if malloc (free or don't free)
-    Uint8 *abuf; // DUMB(abuf = audio_buffer) the audio data in memory
-    Uint32 alen; // DUMB(alen = audio_length) length of the buffer
-    Uint8 volume; // per sample volume       /* Per-sample volume, 0-128 */
-} Mix_Chunk;
+#include "stb_rect_pack.h"
+#include "stb_truetype.h"
 
 
-static struct _Mix_Channel {
-    Mix_Chunk *chunk; // the actual data
-    int playing; // set to Mix_Chunk.alen
-    int paused;  // 0 or 1
-    Uint8 *samples; // current pointer into chunk data
-    int volume;
-    int looping;
-    int tag;
-    Uint32 expire;
-    Uint32 start_time;
-    Mix_Fading fading;
-    int fade_volume;
-    int fade_volume_reset;
-    Uint32 fade_length;
-    Uint32 ticks_fade;
-    effect_info *effects;
-} *mix_channel = NULL;
+#include "zen/zen_lib.h"
+#include "zen/zen_glfw.h"
+#include "zen/zen_glez.h"
 
 
-NOTE - 
-int Mix_OpenAudio(int frequency, Uint16 format, int nchannels, int chunksize)
-This is where SDL_mixer actually sets up the low-level audio stuff
+ZGLFW *glfw;
+uint8 *image;
+uint8 *buf;
+int buf_width;
+int buf_height;
 
 
-------------------------------------------
-LOAD WAV FILE
-------------------------------------------
-Mix_Chunk *Mix_LoadWAV_RW(SDL_RWops *src, int freesrc)
+typedef struct frame_buffer {
+ 
 
-This is the part of mixer that actually loads the wave file.
-A little confusing at because the load-wave file returns
-an SDL_AudioSpec pointer, and fill another SDL_AudioSpec with
-the format of the loaded file.  The returned pointer is just used
-for a null check to see if the load worked
+	Vector3_t vertices[6];
+	Vector2_t tex_coords[6];
 
-This does a conversion on the loaded data if
-format, channels, or freq do not match.  Hmmmm.  Channel count.  
-Missed that.
+	Matrix4x4_t projection;
 
-------------------------------------------
-The convert thing is kind of dumb, but I think I get it.
-------------------------------------------
-
-
-SDL_AudioCVT cvt;
-
-int result = SDL_BuildAudioCVT(&cvt, src_fmt, src_channels, src_freq,
-dest_fmt, dest_channels, dest_freq);
-
-if (result == 1) Ready for conversion
-if (result == 0) No conversion needed
-if (result < 0) Error code. call SDL_GetError()
-
-cvt.len = channel.alen;
-cvt.buf = (Uint8 *) SDL_malloc(cvt.len * cvt.len_mult);
-SDL_memcpy(cvt.buf, channel.abuf, channel.alen);
-
-result = SDL_ConvertAudio(&cvt);
-if (result == 0) success
-if (result < 0) SDL_GetError();
-
-// Now cvt.buf has converted data of length cvt.len_cvt
-free(channel.abuf);
-channel.abuf = cvt.buf
-channel.alen = cvt.len_cvt;
-
-------------------------------------------
-------------------------------------------
+	GLuint vao_id;
+	GLuint vbo_ids[2];
+	GLuint tex_id;
+	GLuint sampler;
+	GLuint program_id;
+	GLint projection_uniform;
+	GLint sampler_location;
+	GLint vertex_attribute;
+	GLint tex_attribute;
 
 
-------------------------------------------
-How does the mixing actually work,
-and why not use it?
-------------------------------------------
-    case AUDIO_U16LSB:
-        {
-            Uint16 src1, src2;
-            int dst_sample;
-            const int max_audioval = 0xFFFF;
+} frame_buffer;
+static frame_buffer *fb;
 
-            len /= 2;
-            while (len--) {
-                src1 = ((src[1]) << 8 | src[0]); // because src is bytes
-                ADJUST_VOLUME(src1, volume);
-                src2 = ((dst[1]) << 8 | dst[0]);
-                src += 2;
-                dst_sample = src1 + src2;
-                if (dst_sample > max_audioval) {
-                    dst_sample = max_audioval;
-                }
-                dst[0] = dst_sample & 0xFF;
-                dst_sample >>= 8;
-                dst[1] = dst_sample & 0xFF;
-                dst += 2;
-            }
-        }
-        break;
-
-------------------------------------------
-------------------------------------------
+//const char *filename = "../Inconsolata-Regular.ttf";
+//const char *filename = "../Roboto-Regular.ttf";
+//const char *filename = "../FreePixel.ttf";
+//const char *filename = "/home/twright/Qt5.7.0/Examples/Qt-5.7/quick/text/fonts/content/fonts/tarzeau_ocr_a.ttf";
+const char *filename = "/home/twright/innoven/java/idea-IC-163.12024.16/plugins/android/lib/layoutlib/data/fonts/DroidSansMono.ttf";
+const int pixel_size = 18;
+stbtt_fontinfo font;
 
 
-Maybe some more code review on the conversion stuff here...
-    /* Build the audio converter and create conversion buffers */
-    if ( wavespec.format != mixer.format ||
-         wavespec.channels != mixer.channels ||
-         wavespec.freq != mixer.freq ) {
-        if ( SDL_BuildAudioCVT(&wavecvt,
-                wavespec.format, wavespec.channels, wavespec.freq,
-                mixer.format, mixer.channels, mixer.freq) < 0 ) {
-            SDL_free(chunk->abuf);
-            SDL_free(chunk);
-            return(NULL);
-        }
+void init_stbtt() {
+
+	//
+	// setup stb_ttf here...
+	struct stat st;
+
+	GB_ASSERT_MSG(stat(filename, &st) == 0, "Can't stat file size for %s", filename);
+	usize size = st.st_size;
+	FILE *fontfile = fopen(filename, "rb");
+	GB_ASSERT_NOT_NULL(fontfile);
+
+	uint8 *data = ZEN_CALLOC(uint8, size);
+	usize bytes_read = fread(data, 1, size, fontfile);
+	GB_ASSERT_MSG(bytes_read == size, "Didn't read enough bytes?");
+	fclose(fontfile);
 
 
-		  /*
-				I question if we even need the sample size here.  
-				Isn't the chunk->alen the size of the buffer?
-				Id chunk->alen is not bytes, the I guess, but
-				how is it not bytes?
-		  */
-        samplesize = ((wavespec.format & 0xFF)/8)*wavespec.channels;
-		  // The wavecvt.len = number of samples (1024) * bytes per sample * num
-		  // of channels
-        wavecvt.len = chunk->alen & ~(samplesize-1);
-        wavecvt.buf = (Uint8 *)SDL_calloc(1, wavecvt.len*wavecvt.len_mult);
-        if ( wavecvt.buf == NULL ) {
-            SDL_SetError("Out of memory");
-            SDL_free(chunk->abuf);
-            SDL_free(chunk);
-            return(NULL);
-        }
-        SDL_memcpy(wavecvt.buf, chunk->abuf, chunk->alen);
-        SDL_free(chunk->abuf);
-
-        /* Run the audio converter */
-        if ( SDL_ConvertAudio(&wavecvt) < 0 ) {
-            SDL_free(wavecvt.buf);
-            SDL_free(chunk);
-            return(NULL);
-        }
-
-        chunk->abuf = wavecvt.buf;
-        chunk->alen = wavecvt.len_cvt;
-    }
-
-------------------------------------------
-QUESTIONS...
-------------------------------------------
-How the fuck does streaming from files work,
-and do we even care?
+	GB_ASSERT(stbtt_InitFont(&font, data, 0));
 
 
-? Is the playing value the number of samples left?
-? What is the channel.chuck for anyway? Seems like an internal 
-	audio chunk format,  i.e. the actually data pointer in the
-	channel.
-BUT - there is also a Uint8 *samples in the channel?  What is
-the difference?
-
-? How to actually mix current samples into output buffer?
-
-
-clear the buffer with silence
-loop through each channel
-if paused, drive on, else
-
-	if channel should expire
-		stop channel
-	
-	else if channel is fading
-		if channel done fading
-			set not fading
-			restore volume
-			if channel fading out
-				stop channel
-		else
-			if channel fading out
-				fade down
-			else
-				fade up	
-
-	if channel still playing
-		while channel has more samples and pos smaller than output buffer length
-		
-			calculate samples remaining in channel
-			calc volume as channel volume time channel chuck volume			
-			make sure at most output buffer length or remaining samples
-			process samples with any effects
-			mix processed samples into current output buffer
-			free effect samples if it was malloc
+	// create testing buffer
+   float scale = stbtt_ScaleForPixelHeight(&font, pixel_size);
+	int x0, y0, x1, y1;
+	stbtt_GetFontBoundingBox(&font, &x0, &y0, &x1, &y1);
+	zout("bounding box: (%f, %f), (%f, %f)", x0 * scale, y0 * scale, x1 * scale, y1 * scale);
+	zout("width, height: %f, %f", (x1 - x0) * scale, (y1 - y0) * scale);
+	buf_width = (int)((x1 - x0) * scale + 1);
+	buf_height = (int)((y1 - y0) * scale + 1);
+	zout("iw, ih: %d, %d", buf_width, buf_height);
+	image = ZEN_CALLOC(uint8, 1024 * 768);	
+	buf = ZEN_CALLOC(uint8, buf_width * buf_height);
+	GB_ASSERT_NOT_NULL(image);	
 
 
-
-
---------------------------------------------------------------------------------
-audio Guy Somberg
---------------------------------------------------------------------------------
-
-
-Output = A + B
-
-Output = sum of all sounds
-
-Embarrassingly Vectorizable
-	Just use SSMD, and it's basically free (Very cheap)
-
-The audio mix is the hard part!  How you combine the sounds that are playing.
-
-An easy way to deal with this is to lower the volume:
-
-* Gain reduction
-* Sound Cones
-* 3D distance attenuation
-* Ducking
-
-Mix States/Sound Moods/Mixer Snapshots
-
-A big chucnk of audio technology revolves around not playing sounds.
-* max playbacks
-* Stream limits
-* Virtualized sound sorces
-
-
-Walter Murch
-Rule of two and a half
-One person, sync footsteps,
-Two people, sync
-Two and 1/2 - Nothing in sync, just a bunch of footsteps
-
-
-Audio Mix
-* Let the most important sounds shine
-
-
-dB = Decibels
-* 1/10 of a Bel
-* What is a Bel?  Doesn't matter
-
-* Most important fact: 6dB = Double
-	-6dB == 1/2 volume
-	-12dB == 1/4 volume
-	+18dB == 8x volume
-
-
-Important source code!!!
-
-float dBToVolume(float dB) {
-	return powf(10.0f, 0.05f * dB);
-}
-
-float VolumeTodB(float volume) {
-	return 20.0f * log10f(volume);
 }
 
 
+void init_framebuffer() {
 
-// Bootstrap an aduio engine
-zen_audio.h
-
-class AudioEngine {
-
-public:
-
-	static void Init();
-	static void Update();
-	static void Shutdown();
-
-	void loadSound(string soundName, bool b3d=true, bool bLooping=false, bool bStream=false);
-	void unloadSound(string soundName);
-	void set3dListenerAndOrientation(Vec3 position, Vec3 look, Vec3 up);
-	void playSound(string soundName, Vec3 pos={0,0,0}, float volumedB = 0.0f);
-	void stopChannel(int channelId);
-	void stopAllChannels();
-	void setChannel3dPosition(int channelId, Vec3 position);
-	void setChannelVolume(int channelId, float volumedB);
-	bool isPlaying(int channelId);
-
-};
+	fb = ZEN_CALLOC(frame_buffer, 1);
+	GB_ASSERT_NOT_NULL(fb);
 
 
-struct Implementation {
+	const char *vs = \
+		"#version 440 core\n"
+		"uniform mat4 proj_mat;\n"
+		"layout (location = 0) in vec3 v_position;\n"
+		"layout (location = 1) in vec2 v_tex_coord;\n"
+		"out vec2 f_tex_coord;\n"
+		"void main(void) {\n"
+		"	gl_Position = proj_mat * vec4(v_position, 1.0f);\n"
+		"	f_tex_coord = v_tex_coord;\n"
+		"}\n";
 
-	Implementation();
-	~Implementation();
+	const char *fs = \
+		"#version 440 core\n"
+		"in vec2 f_tex_coord;\n"
+		"layout (binding = 0) uniform sampler2D u_tex;\n"
+		"out vec4 o_color;\n"
+		"void main(void) {\n"
+		"	float alpha = texture2D(u_tex, f_tex_coord).r;\n"
+		"  o_color = vec4(1.0, 1.0, 1.0, 1.0) * alpha; \n"
+		"}\n";
 
-	void update();
+	fb->projection = Matrix4x4();
 
-	FMOD::System *system;
-
-	int nextChannelId;
-
-	typedef map<string, FMOD::Sound *> SoundMap;
-	typedef map<int, FMOD::Channel *> ChannelMap;
-
-	SoundMap sounds;
-	ChannelMap channels;
-
-};
+	fb->program_id = zglez_create_shader_program(vs, fs);
+	glUseProgram(fb->program_id);
+	fb->projection_uniform = glGetUniformLocation(fb->program_id, "proj_mat");
+	fb->sampler_location = glGetUniformLocation(fb->program_id, "u_tex");
+	fb->vertex_attribute = 0;
+	fb->tex_attribute = 1;
 
 
-void Implementation::update() {
-	vector<ChannelMap::iterator> stoppedChannels;
+	// Generate
+	glGenVertexArrays(1, &fb->vao_id);
+	glGenBuffers(2, fb->vbo_ids);
 
-	for(auto it = channels.begin(), itEnd = channels.end(); it != itEnd; ++it) {
-		bool isPlaying = false;
-		it->second->isPlaying(&isPlaying);
-		if(!isPlaying) {
-			stoppedChannels.push_back(it);
+	glBindVertexArray(fb->vao_id);
+	glEnableVertexAttribArray(fb->vertex_attribute);
+	glEnableVertexAttribArray(fb->tex_attribute);
+
+	// Vertex buffer
+	glBindBuffer(GL_ARRAY_BUFFER, fb->vbo_ids[0]);
+	glVertexAttribPointer(fb->vertex_attribute, 3, GL_FLOAT, GL_FALSE, 0, zen_offset(0));
+	glBufferData(GL_ARRAY_BUFFER, sizeof(fb->vertices), fb->vertices, GL_DYNAMIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, fb->vbo_ids[1]);
+	glVertexAttribPointer(fb->tex_attribute, 2, GL_FLOAT, GL_FALSE, 0, zen_offset(0));
+	glBufferData(GL_ARRAY_BUFFER, sizeof(fb->tex_coords), fb->tex_coords, GL_DYNAMIC_DRAW);
+
+	ZGLEZ_CHECK_ERROR();
+
+	// Cleanup
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+	glUseProgram(0);
+
+
+	glGenTextures(1, &fb->tex_id);
+	glBindTexture(GL_TEXTURE_2D, fb->tex_id);
+
+
+	glGenSamplers(1, &fb->sampler);
+	glSamplerParameteri(fb->sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glSamplerParameteri(fb->sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glSamplerParameteri(fb->sampler, GL_TEXTURE_WRAP_S,     GL_REPEAT);
+	glSamplerParameteri(fb->sampler, GL_TEXTURE_WRAP_T,     GL_REPEAT);
+
+
+	glTexImage2D( GL_TEXTURE_2D, 0, GL_RED, 1024, 768, 0, GL_RED, GL_UNSIGNED_BYTE, NULL);
+
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+
+
+	Vector3_t tlv = Vector3(-1.0f, -1.0f, 0.0f);
+	Vector3_t blv = Vector3(-1.0f, 1.0f, 0.0f);
+	Vector3_t brv = Vector3(1.0f, 1.0f, 0.0f);
+	Vector3_t trv = Vector3(1.0f, -1.0f, 0.0f);
+
+	Vector2_t tlt = Vector2(0.0f, 1.0f);
+	Vector2_t blt = Vector2(0.0f, 0.0f);
+	Vector2_t brt = Vector2(1.0f, 0.0f);
+	Vector2_t trt = Vector2(1.0f, 1.0f);
+
+	// setup verticies and tex coords
+	fb->vertices[0] = tlv;
+	fb->vertices[1] = blv;
+	fb->vertices[2] = trv;
+
+	fb->vertices[3] = trv;
+	fb->vertices[4] = blv;
+	fb->vertices[5] = brv;
+
+	fb->tex_coords[0] = tlt;
+	fb->tex_coords[1] = blt;
+	fb->tex_coords[2] = trt;
+
+	fb->tex_coords[3] = trt;
+	fb->tex_coords[4] = blt;
+	fb->tex_coords[5] = brt;
+
+}
+
+
+void update_framebuffer() {
+
+	float xpos = 100;
+   float scale = stbtt_ScaleForPixelHeight(&font, pixel_size);
+
+	// clear the image
+	memset(image, 0, 1024 * 768);
+	const char *string = "Hello World! AVAV ";
+	int ch = 0;
+
+	while(string[ch]) {
+		// leftSideBearing is the offset from the current horizontal position to the left edge of the character
+		// advanceWidth is the offset from the current horizontal position to the next horizontal position
+		//   these are expressed in unscaled coordinates
+		int advance, lsb;
+		stbtt_GetCodepointHMetrics(&font, string[ch], &advance, &lsb);
+
+		float x_shift = xpos - (float) floor(xpos);
+		//zout("\"%c\" =  adv: %f, lsb: %f, x-shift: %f", string[ch], advance * scale, lsb * scale, x_shift);
+
+		// get the bbox of the bitmap centered around the glyph origin; so the
+		// bitmap width is ix1-ix0, height is iy1-iy0, and location to place
+		// the bitmap top left is (leftSideBearing*scale,iy0).
+		// (Note that the bitmap uses y-increases-down, but the shape uses
+		// y-increases-up, so CodepointBitmapBox and CodepointBox are inverted.)
+
+		int x0, y0, x1, y1;
+		float scale_x = scale;
+		float scale_y = scale;
+		float shift_x = x_shift;
+		float shift_y = 0.0f;
+		stbtt_GetCodepointBitmapBoxSubpixel(
+			&font, string[ch], scale_x, scale_y, shift_x, shift_y, &x0, &y0, &x1, &y1
+		);
+
+		// TODO: before we do any of this we have to learn how
+		// to render to a RenderBuffer or BufferObjects, and then
+		// draw that as a texture on the screen
+
+		//this isn't right - stride not right and
+		//data should be one byte per pixel, not 4 bytes per pixel
+
+		int ypos = 100;
+		int stride = 1024;
+		//ziout(y0);
+		//ziout(y1);
+
+		// can we put the glyph into our temp buffer?
+		// then copy the temp into the real?
+		int row = ypos + y0;
+		int col = xpos;
+		int image_offset = row * stride + col;
+      stbtt_MakeCodepointBitmapSubpixel(
+			&font, image + image_offset, x1 - x0, y1 - y0, stride, 
+			scale_x, scale_y, shift_x, shift_y, string[ch]
+		);
+
+		//zout("\tBBSP: (%d, %d), (%d, %d)", x0, y0, x1, y1);
+
+		xpos += (advance * scale);
+		if (string[ch+1]) {
+			xpos += scale * stbtt_GetCodepointKernAdvance(&font, string[ch], string[ch+1]);
 		}
+		//zfout(xpos);
+		ch++;
+
 	}
 
-	for(auto &it : stoppedChannels) {
-		channels.erase(it);
+}
+
+
+void render_framebuffer() {
+
+	glUseProgram(fb->program_id);
+	glBindVertexArray(fb->vao_id);
+
+	glUniformMatrix4fv(fb->projection_uniform, 1, GL_FALSE, fb->projection.m);
+
+	glActiveTexture(GL_TEXTURE0);
+	glUniform1i(fb->sampler_location, 0);
+	glBindSampler(0, fb->sampler);
+
+	glBindTexture(GL_TEXTURE_2D, fb->tex_id);
+
+	GLint xoffset = 0;
+	GLint yoffset = 0;
+	GLsizei width = 1024;
+	GLsizei height = 768;
+	GLenum format = GL_RED;
+	GLenum type = GL_UNSIGNED_BYTE;
+	void *data = cast(void *)image;
+	glTexSubImage2D(GL_TEXTURE_2D, 0, xoffset, yoffset, width, height, format, type, data);
+
+
+	glBindBuffer(GL_ARRAY_BUFFER, fb->vbo_ids[0]);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, 6 * sizeof(Vector3_t), fb->vertices);
+
+	glBindBuffer(GL_ARRAY_BUFFER, fb->vbo_ids[1]);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, 6 * sizeof(Vector2_t), fb->tex_coords);
+
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+
+	ZGLEZ_CHECK_ERROR();
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindSampler(0, 0);
+	glUseProgram(0);
+
+
+}
+
+
+int main(int argc, char *argv[]) {
+
+	// simple example of writing to a off-screen buffer
+	//
+
+	glfw = zglfw_create("frame_buffer", 1024, 768);
+	zglfw_init(glfw);
+	glViewport(0, 0, 1024, 768);
+	init_framebuffer();
+	init_stbtt();
+
+	bool enable = true;
+	glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
+	zglfw_show_window(glfw);
+	while (zglfw_is_running(glfw)) {
+		if (ZGLFW_KEY_DOWN_ONCE(glfw, SPACE)) {
+			enable = !enable;
+		}
+		if (enable) {
+			glEnable(GL_BLEND);
+		} else {
+			glDisable(GL_BLEND);
+		}
+		zglfw_begin(glfw);
+		glfw->should_close = ZGLFW_KEY_DOWN(glfw, ESCAPE);
+
+		update_framebuffer();
+		render_framebuffer();
+
+		zglfw_end(glfw);
 	}
 
-	system->Update();
+
+	zglfw_quit(glfw);
+	zglfw_destroy(glfw);
+
+	return 0;
 }
-
-
-////////////////////////////////////////////////////////////////////////////////
-
-Implementation *impl = NULL;
-
-void AudioEngine::Init() {
-	impl = new Implementation;
-}
-
-void AudioEngine::Update() {
-	impl->update();
-}
-
-void AudioEngine::Shutdown() {
-	delete impl;
-}
-
-void AudioEngine::loadSound(string name, bool b3d, bool looping, bool stream) {
-
-	auto foundIt = impl->sounds.find(name);
-	if (foundIt != impl->sounds.end()) {
-		// already loaded
-		return;
-	}
-
-	FMOD_MODE mode = FMOD_DEFAULT;
-	mode |= b3d ? FMOD_3D : FMOD_2D;
-	mode |= looping ? FMOD_LOOP_NORMAL : FMOD_LOOP_OFF;
-	mode |= stream ? FMOD_CREATESTREAM : FMOD_CREATECOMPRESSEDSAMPLE;
-	FMOD::Sound *sound = NULL;
-	impl->system->createSound(name, mode, NULL, &sound);
-
-	if (sound) {
-		impl->sounds[name] = sound;
-	}
-}
-
-void AudioEngine::unloadSound(string name) {
-
-	auto foundIt = impl->sounds.find(name);
-	if (foundIt == impl->sounds.end())
-		return; // not loaded
-
-	foundIt->second->release();
-	impl->sounds.erase(foundIt);
-
-}
-
-int AudioEngine::playSound(string name, Vec3 position, float volumedB) {
-
-	int channelId = impl->nextChannelId++;
-	auto foundIt = impl->sounds.find(name);
-	if (foundIt == impl->sounds.end()) {
-		loadSound(name);
-		foundIt = impl->sound.find(name);
-		if (foundIt == impl->sounds.end())
-			return channelId; // Important
-	}
-
-	FMOD::Channel *channel = NULL;
-	impl->system->playSound(FMOD_CHAMMEL_FREE, foundIt->second, true,
-&channel); // true here to not play sound - could pop
-	if (channel) {
-		FMOD_VECTOR pos = VectorToFmod(position);
-		channel->set3DAttributes(&pos, NULL);
-		channel->setVolume(dBToVolume(volumedB));
-		channel->setPaused(false); // now we unpause
-		impl->channels[channelId] = channel;
-	}
-	return channelId;
-}
-
