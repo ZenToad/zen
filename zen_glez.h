@@ -26,11 +26,20 @@ ZGLEZDEF void zglez_init();
 ZGLEZDEF void zglez_quit();
 ZGLEZDEF void zglez_flush();
 ZGLEZDEF void zglez_projection(Matrix4x4_t m);
+ZGLEZDEF void zglez_text_projection(Matrix4x4_t m);
+
 
 ZGLEZDEF int zglez_load_texture_from_file(const char *name, const char * path_to_file, int *w = 0, int *h = 0, int flip_vertically = 0);
 ZGLEZDEF int zglez_load_texture_from_memory(const char *name, char *memory, isize size_in_bytes);
 ZGLEZDEF int zglez_unload_texture(const char *name);
 ZGLEZDEF void zglez_unload_all_textures();
+
+
+ZGLEZDEF int zglez_load_font_from_file(const char *name, const char *path_to_file, int pixel_size);
+ZGLEZDEF int zglez_load_font_from_memory(const char *name, char *memory, isize size_in_bytes, int pixel_size);
+ZGLEZDEF int zglez_unload_font(const char *name);
+ZGLEZDEF void zglez_unload_all_fonts();
+
 
 ZGLEZDEF void zglez_draw_point(Vector3_t v, Colorf_t c, float pt_size = 2.0f);
 ZGLEZDEF void zglez_draw_line(Vector3_t v0, Vector3_t v1, Colorf_t c);
@@ -39,6 +48,8 @@ ZGLEZDEF void zglez_fill_circle(Vector3_t center, float radius, Colorf_t c, int 
 ZGLEZDEF void zglez_draw_polygon(Vector3_t *v, Colorf_t c, int count);
 ZGLEZDEF void zglez_fill_polygon(Vector3_t *v, Colorf_t c, int count, bool blend = true);
 ZGLEZDEF void zglez_texture_quad(const char *name, Vector3_t *v, Vector2_t *t);
+ZGLEZDEF void zglez_draw_text(const char *name, const char *string, Vector2_t position, Colorf_t color);
+
 
 
 #if defined(__cplusplus)
@@ -57,6 +68,17 @@ ZGLEZDEF void zglez_texture_quad(const char *name, Vector3_t *v, Vector2_t *t);
 //
 //------------------------------------------ 
 #if defined(ZEN_GLEZ_IMPLEMENTATION) || defined(ZEN_LIB_DEV)
+
+
+#if defined(ZEN_LIB_DEV)
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include "glad/glad.h"
+#include "stb_image.h"
+#include "stb_truetype.h"
+#include "zen/zen_lib.h"
+#endif
 
 
 static int32 const zglez_internal_texture_format[4] = {GL_R8, GL_RG8, GL_RGB8, GL_RGBA8};
@@ -85,6 +107,25 @@ typedef struct zglez_texture_t {
 
 stb_declare_hash(static, zglez_texture_map, zglez_texmap_, const char*, zglez_texture_t*);
 stb_define_hash_vnull(zglez_texture_map, zglez_texmap_, const char*, NULL, NULL, return stb_hash((char*)k);, zglez_texture_t*, NULL); 
+
+
+typedef struct zglez_font_t {
+
+	stbtt_fontinfo font;
+	// @TODO: not sure what this size should really be
+	stbtt_packedchar pdata[256*2];
+
+	int32 width;
+	int32 height;
+	uint32 handle;
+	uint32 active_texture;
+	uint32 sampler;
+
+} zglez_font_t;
+
+
+stb_declare_hash(static, zglez_font_map, zglez_fontmap_, const char*, zglez_font_t*);
+stb_define_hash_vnull(zglez_font_map, zglez_fontmap_, const char*, NULL, NULL, return stb_hash((char*)k);, zglez_font_t*, NULL); 
 
 
 typedef struct zglez_points {
@@ -174,6 +215,32 @@ typedef struct zglez_textures {
 
 } zglez_textures;
 static zglez_textures *g_zglez_textures = 0;
+
+
+typedef struct zglez_fonts {
+
+	enum {max_vertices = 512 * 6};
+	Vector3_t vertices[max_vertices];
+	Vector2_t tex_coords[max_vertices];
+	Colorf_t colors[max_vertices];
+	int32 count;
+
+	Matrix4x4_t projection;
+
+	zglez_font_t *current_font;
+	zglez_font_map *map;
+
+	GLuint vao_id;
+	GLuint vbo_ids[3];
+	GLuint program_id;
+	GLint projection_uniform;
+	GLint sampler_location;
+	GLint vertex_attribute;
+	GLint tex_attribute;
+	GLint color_attribute;
+
+} zglez_fonts;
+static zglez_fonts *g_zglez_fonts = 0;
 
 
 static void zglez_print_log(GLuint object) {
@@ -795,7 +862,7 @@ static void zglez_destroy_textures() {
 
 	if (textures->vao_id) {
 		glDeleteVertexArrays(1, &textures->vao_id);
-		glDeleteBuffers(3, textures->vbo_ids);
+		glDeleteBuffers(2, textures->vbo_ids);
 	}
 
 	if (textures->program_id) {
@@ -903,6 +970,291 @@ ZGLEZDEF void zglez_unload_all_textures() {
 }
 
 
+ZGLEZDEF void zglez_create_fonts() {
+
+	g_zglez_fonts = ZEN_CALLOC(zglez_fonts, 1);	
+	GB_ASSERT_NOT_NULL(g_zglez_fonts);
+	zglez_fonts *fonts = g_zglez_fonts;
+
+	fonts->map = zglez_fontmap_create();
+
+	const char *vs = \
+		"#version 440 core\n"
+		"uniform mat4 proj_mat;\n"
+		"layout (location = 0) in vec3 v_position;\n"
+		"layout (location = 1) in vec2 v_tex_coord;\n"
+		"layout (location = 2) in vec3 v_color;\n"
+		"out vec2 f_tex_coord;\n"
+		"out vec3 f_color;\n"
+		"void main(void) {\n"
+		"	gl_Position = proj_mat * vec4(v_position, 1.0f);\n"
+		"	f_tex_coord = v_tex_coord;\n"
+		"	f_color = v_color;\n"
+		"}\n";
+
+	const char *fs = \
+		"#version 440 core\n"
+		"in vec2 f_tex_coord;\n"
+		"in vec2 f_color;\n"
+		"layout (binding = 0) uniform sampler2D u_tex;\n"
+		"out vec4 o_colour;\n"
+		"void main(void) {\n"
+		"  float alpha = texture2D(u_tex, f_tex_coord).r;"
+		"	o_colour = vec4(f_color * alpha, alpha);\n"
+		"}\n";
+
+	fonts->projection = Matrix4x4();
+
+	fonts->program_id = zglez_create_shader_program(vs, fs);
+	glUseProgram(fonts->program_id);
+	fonts->projection_uniform = glGetUniformLocation(fonts->program_id, "proj_mat");
+	fonts->sampler_location = glGetUniformLocation(fonts->program_id, "u_tex");
+	fonts->vertex_attribute = 0;
+	fonts->tex_attribute = 1;
+	fonts->color_attribute = 2;
+
+	// Generate
+	glGenVertexArrays(1, &fonts->vao_id);
+	glGenBuffers(3, fonts->vbo_ids);
+
+	glBindVertexArray(fonts->vao_id);
+	glEnableVertexAttribArray(fonts->vertex_attribute);
+	glEnableVertexAttribArray(fonts->tex_attribute);
+	glEnableVertexAttribArray(fonts->color_attribute);
+
+
+	glBindBuffer(GL_ARRAY_BUFFER, fonts->vbo_ids[0]);
+	glVertexAttribPointer(fonts->vertex_attribute, 3, GL_FLOAT, GL_FALSE, 0, zen_offset(0));
+	glBufferData(GL_ARRAY_BUFFER, sizeof(fonts->vertices), fonts->vertices, GL_DYNAMIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, fonts->vbo_ids[1]);
+	glVertexAttribPointer(fonts->tex_attribute, 2, GL_FLOAT, GL_FALSE, 0, zen_offset(0));
+	glBufferData(GL_ARRAY_BUFFER, sizeof(fonts->tex_coords), fonts->tex_coords, GL_DYNAMIC_DRAW);
+
+	glBindBuffer(GL_ARRAY_BUFFER, fonts->vbo_ids[2]);
+	glVertexAttribPointer(fonts->color_attribute, 3, GL_FLOAT, GL_FALSE, 0, zen_offset(0));
+	glBufferData(GL_ARRAY_BUFFER, sizeof(fonts->colors), fonts->colors, GL_DYNAMIC_DRAW);
+
+	ZGLEZ_CHECK_ERROR();
+
+	// Cleanup
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+	glUseProgram(0);
+
+	fonts->count = 0;
+
+}
+
+
+ZGLEZDEF void zglez_flush_fonts() {
+
+	zglez_fonts *fonts = g_zglez_fonts;
+	if (fonts->count == 0 || fonts->current_font == NULL)
+		return;
+
+
+	glUseProgram(fonts->program_id);
+	glBindVertexArray(fonts->vao_id);
+
+	zglez_font_t *font = fonts->current_font;
+	glUniformMatrix4fv(fonts->projection_uniform, 1, GL_FALSE, fonts->projection.m);
+	glUniform1i(fonts->sampler_location, font->active_texture);
+
+	glActiveTexture(GL_TEXTURE0 + font->active_texture);
+	glBindSampler(font->active_texture, font->sampler);
+
+	glBindTexture(GL_TEXTURE_2D, font->handle);
+
+	glBindBuffer(GL_ARRAY_BUFFER, fonts->vbo_ids[0]);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, fonts->count * sizeof(Vector3_t), fonts->vertices);
+
+	glBindBuffer(GL_ARRAY_BUFFER, fonts->vbo_ids[1]);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, fonts->count * sizeof(Vector2_t), fonts->tex_coords);
+
+	glBindBuffer(GL_ARRAY_BUFFER, fonts->vbo_ids[2]);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, fonts->count * sizeof(Colorf_t), fonts->colors);
+
+	glDrawArrays(GL_TRIANGLES, 0, fonts->count);
+
+	ZGLEZ_CHECK_ERROR();
+
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindSampler(0, 0);
+	glUseProgram(0);
+
+	fonts->count = 0;
+
+}
+
+
+
+static void zglez_delete_font_texture(zglez_font_t *font) {
+
+	glDeleteTextures(1, &font->handle);
+	glDeleteSamplers(1, &font->sampler);
+
+}
+
+
+static void zglez_destroy_fonts() {
+
+	zglez_fonts *fonts = g_zglez_fonts;
+	if (fonts == NULL)
+		return;
+
+	const char ** keys = NULL;
+	zglez_font_map *map = fonts->map;
+	for (int i = 0; i < map->limit; ++i) {
+		if (map->table[i].k)
+			stb_arr_push(keys, map->table[i].k);	
+	}
+
+	zglez_font_t *font;
+	for (int i = 0; i < stb_arr_len(keys); ++i) {
+		if (zglez_fontmap_remove(map, keys[i], &font)) {
+			zglez_delete_font_texture(font);
+			free(font);
+		}
+	}
+
+	zglez_fontmap_destroy(fonts->map);
+
+
+	if (fonts->vao_id) {
+		glDeleteVertexArrays(1, &fonts->vao_id);
+		glDeleteBuffers(3, fonts->vbo_ids);
+	}
+
+	if (fonts->program_id) {
+		glDeleteProgram(fonts->program_id);
+	}
+
+	free(fonts);
+	stb_arr_free(keys);
+
+}
+
+
+ZGLEZDEF int zglez_load_font_from_memory(const char *name, uint8 *memory, int pixel_size) {
+
+
+	zglez_font_map *map = g_zglez_fonts->map;
+	zglez_font_t *old_font = zglez_fontmap_get(map, name);
+	if (old_font != NULL) {
+		zglez_unload_font(name);
+	}
+
+
+	zglez_font_t *font = ZEN_CALLOC(zglez_font_t, 1);
+	GB_ASSERT_NOT_NULL(font);
+	zglez_fontmap_set(map, name, font);
+
+
+	// TODO:Need a better way to figure out texture size
+	font->width = 512;
+	font->height = 512;
+	font->active_texture = 0;
+
+	GB_ASSERT(stbtt_InitFont(&font->font, memory, stbtt_GetFontOffsetForIndex(memory,0)));
+
+	uint8 *texture_data = ZEN_CALLOC(uint8, font->width * font->height);
+	GB_ASSERT_NOT_NULL(texture_data);
+
+	stbtt_pack_context pc;
+	stbtt_PackBegin(&pc, texture_data, 512, 512, 0, 1, NULL);
+	stbtt_PackSetOversampling(&pc, 4, 4);
+	stbtt_PackFontRange(&pc, memory, 0, pixel_size, 32, 95, font->pdata);
+	stbtt_PackFontRange(&pc, memory, 0, pixel_size, 0xa0, 0x100-0xa0, font->pdata);
+	stbtt_PackEnd(&pc);
+
+
+	glGenTextures(1, &font->handle);
+	glBindTexture(GL_TEXTURE_2D, font->handle);
+
+
+	glGenSamplers(1, &font->sampler);
+	glSamplerParameteri(font->sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glSamplerParameteri(font->sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glSamplerParameteri(font->sampler, GL_TEXTURE_WRAP_S,     GL_REPEAT);
+	glSamplerParameteri(font->sampler, GL_TEXTURE_WRAP_T,     GL_REPEAT);
+
+
+	GB_ASSERT(GL_MAX_TEXTURE_SIZE > font->width);
+	GB_ASSERT(GL_MAX_TEXTURE_SIZE > font->height);
+
+	glTexImage2D(
+		GL_TEXTURE_2D, 0, GL_RED, font->width, font->height, 
+		0, GL_RED, GL_UNSIGNED_BYTE, texture_data
+	);
+	free(texture_data);
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glFinish();
+
+	return 1;
+
+
+}
+
+
+ZGLEZDEF int zglez_load_font_from_file(const char *name, const char *path_to_file, int pixel_size) {
+
+	struct stat st;
+
+	GB_ASSERT_MSG(stat(path_to_file, &st) == 0, "Can't stat file size for %s", path_to_file);
+	usize size = st.st_size;
+	FILE *fontfile = fopen(path_to_file, "rb");
+	GB_ASSERT_NOT_NULL(fontfile);
+
+	uint8 *data = ZEN_CALLOC(uint8, size);
+	usize bytes_read = fread(data, 1, size, fontfile);
+	GB_ASSERT_MSG(bytes_read == size, "Didn't read enough bytes?");
+	fclose(fontfile);
+
+	int result = zglez_load_font_from_memory(name, data, pixel_size);
+	free(data);
+
+	return result;
+
+}
+
+
+ZGLEZDEF int zglez_unload_font(const char *name) {
+	zglez_font_t *font = NULL;
+	int result = zglez_fontmap_remove(g_zglez_fonts->map, name, &font);
+	if (result) {
+		zglez_delete_font_texture(font);
+		free(font);
+	}
+	return result;
+}
+
+
+ZGLEZDEF void zglez_unload_all_fonts() {
+
+	const char ** keys = NULL;
+	zglez_font_map *map = g_zglez_fonts->map;
+	for (int i = 0; i < map->limit; ++i) {
+		if (map->table[i].k)
+			stb_arr_push(keys, map->table[i].k);	
+	}
+
+	zglez_font_t *font = NULL;
+	for (int i = 0; i < stb_arr_len(keys); ++i) {
+		if (zglez_fontmap_remove(map, keys[i], &font)) {
+			zglez_delete_font_texture(font);
+			free(font);
+			font = NULL;
+		}
+	}
+
+}
+
+
 ZGLEZDEF void zglez_draw_point(Vector3_t v, Colorf_t c, float pt_size) {
 	zglez_point_vertex(v, c, pt_size);
 }
@@ -928,7 +1280,6 @@ ZGLEZDEF void zglez_draw_polygon(Vector3_t *v, Colorf_t c, int count) {
 
 void zglez_fill_polygon(Vector3_t *v, Colorf_t c, int count, bool blend) {
 
-	zglez_triangles *tri = g_zglez_triangles;
 	Colorf_t color = blend ? c * 0.5f : c;
 	Vector3_t VM = v[0];
 	Vector3_t VA = v[count - 1];
@@ -940,7 +1291,6 @@ void zglez_fill_polygon(Vector3_t *v, Colorf_t c, int count, bool blend) {
 		VA = VB;
 	}
 
-	zglez_lines *lines = g_zglez_lines;
 	Vector3_t V1 = v[count - 1];
 	for (int i = 1; i < count; ++i) {
 		Vector3_t V0 = v[i];
@@ -974,7 +1324,6 @@ void zglez_fill_circle(Vector3_t center, float radius, Colorf_t c, int steps, bo
 
 	float delta = 2.0f * M_PI / cast(float)steps;
 
-	zglez_triangles *tri = g_zglez_triangles;
 	float x = radius * cosf(0 * delta);
 	float y = radius * sinf(0 * delta);
 	Vector3_t V0 = Vector3(x, y, center.z);
@@ -1021,12 +1370,36 @@ ZGLEZDEF void zglez_texture_quad(const char *name, Vector3_t *v, Vector2_t *t) {
 }
 
 
+static void zglez_font_vertex(zglez_font_t *font, Vector3_t v, Vector2_t t, Colorf_t c) {
+
+	zglez_fonts *fonts = g_zglez_fonts;
+	if (fonts->count >= fonts->max_vertices || fonts->current_font  != font)
+		zglez_flush_fonts();
+
+	fonts->current_font = font;
+	fonts->vertices[fonts->count] = v;
+	fonts->tex_coords[fonts->count] = t;
+	fonts->colors[fonts->count] = c;
+
+	fonts->count++;
+
+}
+
+
+ZGLEZDEF void zglez_draw_text(const char *name, const char *string, Vector2_t position, Colorf_t color) {
+
+	//@TODO(tim): finish this...
+	
+}
+
+
 ZGLEZDEF void zglez_init() {
 
 	zgles_create_points();
 	zglez_create_lines();
 	zglez_create_triangles();
 	zglez_create_textures();
+	zglez_create_fonts();
 
 }
 
@@ -1041,12 +1414,18 @@ ZGLEZDEF void zglez_projection(Matrix4x4_t mat) {
 }
 
 
+ZGLEZDEF void zglez_text_projection(Matrix4x4_t mat) {
+	g_zglez_fonts->projection = mat;
+}
+
+
 ZGLEZDEF void zglez_flush() {
 
 	zglez_flush_textures();
 	zglez_flush_triangles();
 	zglez_flush_lines();
 	zglez_flush_points();
+	zglez_flush_fonts();
 
 }
 
@@ -1057,6 +1436,7 @@ ZGLEZDEF void zglez_quit() {
 	zglez_destroy_lines();
 	zglez_destroy_triangles();
 	zglez_destroy_textures();
+	zglez_destroy_fonts();
 
 }
 
