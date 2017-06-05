@@ -18,6 +18,8 @@
 #ifndef ZEN_H_INCLUDE
 #define ZEN_H_INCLUDE
 
+//@TODO: need some kind of cross platform file i/o
+//maybe look at SDL?
 #ifdef __cplusplus
 extern "C" {
 #endif
