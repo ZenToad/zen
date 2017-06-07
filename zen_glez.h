@@ -8,6 +8,14 @@
 #include "zen/zen_lib/zen_math.h"
 #include "zen/zen_lib/zen_hashmap.h"
 #endif
+
+
+#if !defined(ZGLEZ_FONT_WIDTH)
+#define ZGLEZ_FONT_WIDTH	2048
+#endif
+#if !defined(ZGLEZ_FONT_HEIGHT)
+#define ZGLEZ_FONT_HEIGHT	2048
+#endif
  
 
 #if defined(ZEN_GLEZ_STATIC)
@@ -35,7 +43,7 @@ ZGLEZDEF int zglez_unload_texture(const char *name);
 ZGLEZDEF void zglez_unload_all_textures();
 
 
-ZGLEZDEF int zglez_load_font_from_memory(const char *name, unsigned char *memory, isize size_in_bytes, int pixel_size);
+ZGLEZDEF int zglez_load_font_from_memory(const char *name, unsigned char *memory, isize size_in_bytes, int pixel_size, int padding = 4, int oversample = 1);
 ZGLEZDEF int zglez_unload_font(const char *name);
 ZGLEZDEF void zglez_unload_all_fonts();
 
@@ -114,7 +122,7 @@ typedef struct zglez_font_t {
 
 	stbtt_fontinfo font;
 	// @TODO: not sure what this size should really be
-	stbtt_packedchar pdata[256*2];
+	stbtt_packedchar *pdata;
 
 	int32 width;
 	int32 height;
@@ -1140,7 +1148,8 @@ static void zglez_destroy_fonts() {
 }
 
 
-ZGLEZDEF int zglez_load_font_from_memory(const char *name, unsigned char *memory, int pixel_size) {
+ZGLEZDEF int zglez_load_font_from_memory(const char *name, unsigned char *memory, isize size_in_bytes, 
+		int pixel_size, int padding, int oversample) {
 
 	zglez_font_map *map = g_zglez_fonts->map;
 	zglez_font_t *old_font = zglez_fontmap_get(map, name);
@@ -1155,22 +1164,34 @@ ZGLEZDEF int zglez_load_font_from_memory(const char *name, unsigned char *memory
 
 
 	// TODO:Need a better way to figure out texture size
-	font->width = 512;
-	font->height = 512;
+	font->width = ZGLEZ_FONT_WIDTH;
+	font->height = ZGLEZ_FONT_HEIGHT;
 	font->active_texture = 0;
 
 	GB_ASSERT(stbtt_InitFont(&font->font, memory, stbtt_GetFontOffsetForIndex(memory,0)));
 
+	int ascii_start = ' ';
+	int ascii_end = '~';
+	int ascii_count = ascii_end - ascii_start + 1;
+	ziout(ascii_count);
+	int ext_start = 0xA0;
+	int ext_end = 0xFF;
+	int ext_count = ext_end - ext_start + 1;
+	ziout(ext_count);
+
+	// pdata = [ascii_count + ext_count]
+	font->pdata = ZEN_CALLOC(stbtt_packedchar, ascii_count + ext_count);
 	uint8 *texture_data = ZEN_CALLOC(uint8, font->width * font->height);
 	GB_ASSERT_NOT_NULL(texture_data);
 
 	stbtt_pack_context pc;
-	stbtt_PackBegin(&pc, texture_data, 512, 512, 0, 1, NULL);
-	stbtt_PackSetOversampling(&pc, 4, 4);
-	stbtt_PackFontRange(&pc, memory, 0, pixel_size, 32, 95, font->pdata);
-	stbtt_PackFontRange(&pc, memory, 0, pixel_size, 0xa0, 0x100-0xa0, font->pdata);
+	stbtt_PackBegin(&pc, texture_data, font->width, font->height, 0, padding, NULL);
+	stbtt_PackSetOversampling(&pc, oversample, oversample);
+	stbtt_PackFontRange(&pc, memory, 0, pixel_size, ascii_start, ascii_count, font->pdata);
+	stbtt_PackFontRange(&pc, memory, 0, pixel_size, ext_start, ext_count, font->pdata + ascii_count);
 	stbtt_PackEnd(&pc);
 
+	free(memory);
 
 	glGenTextures(1, &font->handle);
 	glBindTexture(GL_TEXTURE_2D, font->handle);
@@ -1394,10 +1415,28 @@ static void zglez_font_vertex(zglez_font_t *font, float x, float y, float s, flo
 }
 
 
+static int zglez_get_char_index(int ch) {
+
+	// @TODO: is there a better way?
+	int ascii_start = ' ';
+	int ascii_end = '~';
+	int ascii_count = ascii_end - ascii_start + 1;
+	int ext_start = 0xA0;
+	int ext_end = 0xFF;
+
+	if (ch >= ascii_start && ch <= ascii_end) {
+		return ch - ascii_start;
+	} else if(ch >= ext_start && ch <= ext_end) {
+		return ch - ext_start + ascii_count;	
+	} else {
+		return -1;
+	}
+
+}
+
+
 ZGLEZDEF void zglez_draw_text(const char *name, const char *string, Vector2_t position, Colorf_t color) {
 
-	//@TODO(tim): finish this...
-	// just get it working
 	zglez_fonts * fonts = g_zglez_fonts;
 	zglez_font_t *font = zglez_fontmap_get(fonts->map, name);
 	GB_ASSERT_NOT_NULL(font);
@@ -1408,8 +1447,8 @@ ZGLEZDEF void zglez_draw_text(const char *name, const char *string, Vector2_t po
 	float ypos = position.y;
 
 	while (string[ch]) {
-
-		stbtt_GetPackedQuad(font->pdata, font->width, font->height, string[ch], &xpos, &ypos, &q, 1);
+		int char_index = zglez_get_char_index(string[ch]);
+		stbtt_GetPackedQuad(font->pdata, font->width, font->height, char_index, &xpos, &ypos, &q, 1);
 
 		zglez_font_vertex(font, q.x0, q.y0, q.s0, q.t0, color);
 		zglez_font_vertex(font, q.x0, q.y1, q.s0, q.t1, color);
