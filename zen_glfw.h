@@ -288,7 +288,7 @@ ZGLFWDEF void zglfw_begin(ZGLFW *glfw) {
 	glfw->mouse_dx = glfw->mouse_x - glfw->last_mouse_x; 
 	glfw->mouse_dy = glfw->mouse_y - glfw->last_mouse_y; 
 
-   glClear(GL_COLOR_BUFFER_BIT);
+   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
    int r = glfw->window_background & 0xFF;
    int g = (glfw->window_background >> 8) & 0xFF;

@@ -44,6 +44,8 @@ ZGLEZDEF void zglez_draw_point(Vector3_t v, Colorf_t c, float pt_size = 2.0f);
 ZGLEZDEF void zglez_draw_line(Vector3_t v0, Vector3_t v1, Colorf_t c);
 ZGLEZDEF void zglez_draw_circle(Vector3_t center, float radius, Colorf_t c, int steps = 32);
 ZGLEZDEF void zglez_fill_circle(Vector3_t center, float radius, Colorf_t c, int steps = 32, bool blend = true);
+ZGLEZDEF void zglez_draw_rect(float x0, float y0, float x1, float y1, Colorf_t color);
+ZGLEZDEF void zglez_fill_rect(float x0, float y0, float x1, float y1, Colorf_t color);
 ZGLEZDEF void zglez_draw_polygon(Vector3_t *v, Colorf_t c, int count);
 ZGLEZDEF void zglez_fill_polygon(Vector3_t *v, Colorf_t c, int count, bool blend = true);
 ZGLEZDEF void zglez_texture_quad(const char *name, Vector3_t *v, Vector2_t *t);
@@ -1325,6 +1327,36 @@ void zglez_fill_circle(Vector3_t center, float radius, Colorf_t c, int steps, bo
 		zglez_draw_line(V0, V1, c);
 		V0 = V1;
 	}
+
+}
+
+
+ZGLEZDEF void zglez_draw_rect(float x0, float y0, float x1, float y1, Colorf_t color) {
+
+	zglez_line_vertex(Vector3(x0, y0, 0.0f), color);
+	zglez_line_vertex(Vector3(x0, y1, 0.0f), color);
+
+	zglez_line_vertex(Vector3(x0, y1, 0.0f), color);
+	zglez_line_vertex(Vector3(x1, y1, 0.0f), color);
+
+	zglez_line_vertex(Vector3(x1, y1, 0.0f), color);
+	zglez_line_vertex(Vector3(x1, y0, 0.0f), color);
+
+	zglez_line_vertex(Vector3(x1, y0, 0.0f), color);
+	zglez_line_vertex(Vector3(x0, y0, 0.0f), color);
+
+}
+
+
+ZGLEZDEF void zglez_fill_rect(float x0, float y0, float x1, float y1, float z, Colorf_t color) {
+
+	zglez_triangle_vertex(Vector3(x0, y1, z), color);
+	zglez_triangle_vertex(Vector3(x0, y0, z), color);
+	zglez_triangle_vertex(Vector3(x1, y1, z), color);
+
+	zglez_triangle_vertex(Vector3(x1, y1, z), color);
+	zglez_triangle_vertex(Vector3(x0, y0, z), color);
+	zglez_triangle_vertex(Vector3(x1, y0, z), color);
 
 }
 
