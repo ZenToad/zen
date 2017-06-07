@@ -992,9 +992,9 @@ ZGLEZDEF void zglez_create_fonts() {
 		"uniform mat4 proj_mat;\n"
 		"layout (location = 0) in vec3 v_position;\n"
 		"layout (location = 1) in vec2 v_tex_coord;\n"
-		"layout (location = 2) in vec3 v_color;\n"
+		"layout (location = 2) in vec4 v_color;\n"
 		"out vec2 f_tex_coord;\n"
-		"out vec3 f_color;\n"
+		"out vec4 f_color;\n"
 		"void main(void) {\n"
 		"	gl_Position = proj_mat * vec4(v_position, 1.0f);\n"
 		"	f_tex_coord = v_tex_coord;\n"
@@ -1004,12 +1004,12 @@ ZGLEZDEF void zglez_create_fonts() {
 	const char *fs = \
 		"#version 440 core\n"
 		"in vec2 f_tex_coord;\n"
-		"in vec3 f_color;\n"
+		"in vec4 f_color;\n"
 		"layout (binding = 0) uniform sampler2D u_tex;\n"
-		"out vec4 o_colour;\n"
+		"out vec4 o_color;\n"
 		"void main(void) {\n"
 		"  float alpha = texture2D(u_tex, f_tex_coord).r;"
-		"	o_colour = vec4(f_color * alpha, alpha);\n"
+		"	o_color = f_color * alpha;\n"
 		"}\n";
 
 	fonts->projection = Matrix4x4();
@@ -1191,7 +1191,6 @@ ZGLEZDEF int zglez_load_font_from_memory(const char *name, unsigned char *memory
 	stbtt_PackFontRange(&pc, memory, 0, pixel_size, ext_start, ext_count, font->pdata + ascii_count);
 	stbtt_PackEnd(&pc);
 
-	free(memory);
 
 	glGenTextures(1, &font->handle);
 	glBindTexture(GL_TEXTURE_2D, font->handle);
@@ -1226,6 +1225,7 @@ ZGLEZDEF int zglez_unload_font(const char *name) {
 	zglez_font_t *font = NULL;
 	int result = zglez_fontmap_remove(g_zglez_fonts->map, name, &font);
 	if (result) {
+		GB_ASSERT_NOT_NULL(font);
 		zglez_delete_font_texture(font);
 		free(font);
 	}
@@ -1399,14 +1399,14 @@ ZGLEZDEF void zglez_texture_quad(const char *name, Vector3_t *v, Vector2_t *t) {
 }
 
 
-static void zglez_font_vertex(zglez_font_t *font, float x, float y, float s, float t, Colorf_t c) {
+static void zglez_font_vertex(zglez_font_t *font, float x, float y, float z, float s, float t, Colorf_t c) {
 
 	zglez_fonts *fonts = g_zglez_fonts;
 	if (fonts->count >= fonts->max_vertices || fonts->current_font  != font)
-		zglez_flush_fonts();
+		zglez_flush();
 
 	fonts->current_font = font;
-	fonts->vertices[fonts->count] = Vector3(x, y, 0);
+	fonts->vertices[fonts->count] = Vector3(x, y, z);
 	fonts->tex_coords[fonts->count] = Vector2(s, t);
 	fonts->colors[fonts->count] = c;
 
@@ -1435,7 +1435,7 @@ static int zglez_get_char_index(int ch) {
 }
 
 
-ZGLEZDEF void zglez_draw_text(const char *name, const char *string, Vector2_t position, Colorf_t color) {
+ZGLEZDEF void zglez_draw_text(const char *name, const char *string, Vector3_t position, Colorf_t color) {
 
 	zglez_fonts * fonts = g_zglez_fonts;
 	zglez_font_t *font = zglez_fontmap_get(fonts->map, name);
@@ -1445,18 +1445,19 @@ ZGLEZDEF void zglez_draw_text(const char *name, const char *string, Vector2_t po
 	stbtt_aligned_quad q;
 	float xpos = position.x;
 	float ypos = position.y;
+	float zpos = position.z;
 
 	while (string[ch]) {
 		int char_index = zglez_get_char_index(string[ch]);
-		stbtt_GetPackedQuad(font->pdata, font->width, font->height, char_index, &xpos, &ypos, &q, 1);
+		stbtt_GetPackedQuad(font->pdata, font->width, font->height, char_index, &xpos, &ypos, &q, 0);
 
-		zglez_font_vertex(font, q.x0, q.y0, q.s0, q.t0, color);
-		zglez_font_vertex(font, q.x0, q.y1, q.s0, q.t1, color);
-		zglez_font_vertex(font, q.x1, q.y0, q.s1, q.t0, color);
+		zglez_font_vertex(font, q.x0, q.y0, zpos, q.s0, q.t0, color);
+		zglez_font_vertex(font, q.x0, q.y1, zpos, q.s0, q.t1, color);
+		zglez_font_vertex(font, q.x1, q.y0, zpos, q.s1, q.t0, color);
 
-		zglez_font_vertex(font, q.x1, q.y0, q.s1, q.t0, color);
-		zglez_font_vertex(font, q.x0, q.y1, q.s0, q.t1, color);
-		zglez_font_vertex(font, q.x1, q.y1, q.s1, q.t1, color);
+		zglez_font_vertex(font, q.x1, q.y0, zpos, q.s1, q.t0, color);
+		zglez_font_vertex(font, q.x0, q.y1, zpos, q.s0, q.t1, color);
+		zglez_font_vertex(font, q.x1, q.y1, zpos, q.s1, q.t1, color);
 		ch++;
 
 	}
