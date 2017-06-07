@@ -29,7 +29,7 @@ extern "C" {
 
 typedef struct SDL_Zen {
 
-	char *window_title;
+	const char *window_title;
 
    int major_version;
    int minor_version;
@@ -73,7 +73,7 @@ typedef struct SDL_Zen {
 } SDL_Zen;
 
 
-ZSDL_DEF SDL_Zen *SDL_Zen_Create();
+ZSDL_DEF SDL_Zen *SDL_Zen_Create(const char *title, int width, int height, int major = 4, int minor = 5);
 ZSDL_DEF void SDL_Zen_Init(SDL_Zen *sdl);
 ZSDL_DEF void SDL_Zen_ShowWindow(SDL_Zen *sdl);
 ZSDL_DEF int SDL_Zen_IsRunning(SDL_Zen *sdl);
@@ -104,8 +104,19 @@ static void sdl_die(const char * message) {
 }
 
 
-ZSDL_DEF SDL_Zen *SDL_Zen_Create() {
-	return ZEN_CALLOC(SDL_Zen, 1);
+ZSDL_DEF SDL_Zen *SDL_Zen_Create(const char *title, int width, int height, int major, int minor) {
+
+	SDL_Zen *sdl = ZEN_CALLOC(SDL_Zen, 1);
+	GB_ASSERT_NOT_NULL(sdl);
+
+	sdl->window_title = title;
+	sdl->major_version = major;
+	sdl->minor_version = minor;
+	sdl->window_width = width;
+	sdl->window_height = height;
+	sdl->window_background = 0xFF333333;
+
+	return sdl;
 }
 
 
@@ -116,10 +127,8 @@ ZSDL_DEF void SDL_Zen_Destroy(SDL_Zen *sdl) {
 
 void SDL_Zen_Init(SDL_Zen *sdl) {
 
-
 	// Initialize SDL 
-	//if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
-	if (SDL_Init(SDL_INIT_VIDEO) < 0)
+	if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
 		sdl_die("Couldn't initialize SDL");
 
 	atexit (SDL_Quit);
