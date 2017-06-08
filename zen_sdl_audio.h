@@ -1,6 +1,20 @@
-// Some docs will go here
-//
-// license info here
+/* zen_sdl_audio.h - v0.42 - SDL Audio wrapper -https://github.com/ZenToad/zen
+
+   Do this:
+      #define ZEN_SDL_AUDIO_IMPLEMENTATION
+   before you include this file in *one* C or C++ file to create the implementation.
+   // i.e. it should look like this:
+   #include ...
+   #include ...
+   #include ...
+   #define ZEN_SDL_AUDIO_IMPLEMENTATION
+   #include "zen_sdl_audio.h"
+
+	 zlib license:
+	 Full license at bottom of file.
+
+*/
+
 
 #if !defined(__ZEN_SDL_AUDIO_H__)
 #define __ZEN_SDL_AUDIO_H__
@@ -62,7 +76,7 @@ ZAUDIODEF bool zen_audio_is_playing(ZenAudioSystem *engine, uint32 channel_id);
 #endif // __ZEN_SDL_AUDIO_H__
 
 
-//------------------------------------------ 
+//------------------------------------------
 //
 //
 // Implementation
@@ -116,8 +130,8 @@ typedef struct zen_channel {
 	float fade_volume;
 
 
-	float left_pan; 
-	float right_pan; 
+	float left_pan;
+	float right_pan;
 
 	float gain;
 
@@ -189,7 +203,7 @@ static void mix_audio_stream(ZenAudioSystem *audio, zen_channel *c, float **out_
 			} else {
 				c->is_playing = 0;
 				return;
-			} 
+			}
 		}
 	}
 
@@ -206,13 +220,13 @@ static void mix_channel(ZenAudioSystem *audio, zen_channel *c, uint32 sdl_ticks,
 
 
 	if (c->fade_type != NOT_FADING) {
-		uint32 ticks = sdl_ticks - c->ticks_fade; 
+		uint32 ticks = sdl_ticks - c->ticks_fade;
 		if (ticks < c->fade_length) {
 			c->gain = c->fade_volume_reset;
 			if (c->fade_type == FADE_OUT) {
 				c->is_playing = 0;
 				return;
-			} 
+			}
 			c->fade_type = NOT_FADING;
 		} else if (c->fade_type == FADE_OUT) {
 			c->gain = c->fade_volume * (c->fade_length - ticks);
@@ -243,7 +257,7 @@ static void zen_audio_callback(void *userdata, uint8 *output, int len) {
 
 	for (int i = 0; i < ZEN_AUDIO_MAX_CHANNELS; ++i) {
 		if (audio->channels[i].is_playing) {
-			mix_channel(audio, &audio->channels[i], ticks, &output_buffer, sample_count);	
+			mix_channel(audio, &audio->channels[i], ticks, &output_buffer, sample_count);
 		}
 	}
 
@@ -300,7 +314,7 @@ static zen_sound *zen_audio_get_sound(ZenAudioSystem *audio, const char *name) {
 	for (int i = 0; i < ZEN_AUDIO_MAX_SOUNDS; ++i) {
 		zen_sound *sound = &audio->sounds[i];
 		if (sound->is_loaded && (strcmp(sound->name, name) == 0)) {
-			return sound;	
+			return sound;
 		}
 	}
 
@@ -475,7 +489,7 @@ ZAUDIODEF void zen_audio_set_channel_volume(ZenAudioSystem *audio, uint32 channe
 
 
 ZAUDIODEF bool zen_audio_is_playing(ZenAudioSystem *audio, uint32 channel_id) {
-	
+
 	bool is_playing = false;
 	zen_channel *channel = zen_audio_find_channel(audio, channel_id);
 	if (channel) {
@@ -507,7 +521,7 @@ ZAUDIODEF void zen_audio_load_sound(ZenAudioSystem *audio, const char *sound_nam
 	SDL_zero(cvt);
 
 	SDL_AudioSpec *mix = &audio->mixer;
-	int result = SDL_BuildAudioCVT(&cvt, 
+	int result = SDL_BuildAudioCVT(&cvt,
 			wav_spec.format, wav_spec.channels, wav_spec.freq,
 			mix->format, mix->channels, mix->freq);
 
@@ -535,7 +549,24 @@ ZAUDIODEF void zen_audio_load_sound(ZenAudioSystem *audio, const char *sound_nam
 
 #endif // ZEN_SDL_AUDIO_IMPLEMENTATION
 
-// full license here
-//
-//
-//
+/*
+  zlib license:
+
+  Copyright (c) 2017 Timothy Wright https://github.com/ZenToad
+
+  This software is provided 'as-is', without any express or implied
+  warranty. In no event will the authors be held liable for any damages
+  arising from the use of this software.
+
+  Permission is granted to anyone to use this software for any purpose,
+  including commercial applications, and to alter it and redistribute it
+  freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+*/

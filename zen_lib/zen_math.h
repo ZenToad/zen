@@ -1,5 +1,4 @@
-/* zen_math.h - v0.42 - public domain utility -https://github.com/ZenToad/zen
-                                     no warranty implied; use at your own risk
+/* zen_math.h - v0.42 - Math Library -https://github.com/ZenToad/zen
 
    Do this:
       #define ZEN_MATH_IMPLEMENTATION
@@ -11,7 +10,8 @@
    #define ZEN_MATH_IMPLEMENTATION
    #include "zen_math.h"
 
-	Full license at bottom of file.	
+	 zlib license:
+	 Full license at bottom of file.
 
 */
 
@@ -57,7 +57,7 @@ typedef uint64_t uint64;
 
 #ifdef ZEN_MATH_STATIC
 #define ZMATHDEF static
-#else 
+#else
 #define ZMATHDEF extern
 #endif
 
@@ -308,7 +308,7 @@ zen_inline void print(Matrix4x4_t m) {print_mat4x4(m);}
 #endif // __ZEN_MATN_H__
 
 
-//------------------------------------------ 
+//------------------------------------------
 //
 //
 // IMPLEMENTATION
@@ -318,7 +318,7 @@ zen_inline void print(Matrix4x4_t m) {print_mat4x4(m);}
 
 
 #ifdef ZEN_MATH_IMPLEMENTATION
- 
+
 
 Color_t COLOR_WHITE = Color(255, 255, 255, 255);
 Color_t COLOR_SILVER = Color(191, 191, 191, 255);
@@ -699,7 +699,7 @@ ZMATHDEF Matrix4x4_t rotx_mat4x4(Matrix4x4_t m, float rad) {
 	Matrix4x4_t rot = Matrix4x4();
 	float c = cosf(rad);
 	float s = sinf(rad);
-	
+
 	rot.m[5] = c;
 	rot.m[6] = s;
 	rot.m[9] = -s;
@@ -714,7 +714,7 @@ ZMATHDEF Matrix4x4_t roty_mat4x4(Matrix4x4_t m, float rad) {
 	Matrix4x4_t rot = Matrix4x4();
 	float c = cosf(rad);
 	float s = sinf(rad);
-	
+
 	rot.m[0] = c;
 	rot.m[2] = -s;
 	rot.m[8] = s;
@@ -729,7 +729,7 @@ ZMATHDEF Matrix4x4_t rotz_mat4x4(Matrix4x4_t m, float rad) {
 	Matrix4x4_t rot = Matrix4x4();
 	float c = cosf(rad);
 	float s = sinf(rad);
-	
+
 	rot.m[0] = c;
 	rot.m[1] = s;
 	rot.m[4] = -s;
@@ -763,37 +763,37 @@ ZMATHDEF int inverse_mat4x4(Matrix4x4_t mat, Matrix4x4_t *out) {
 	float det;
 	int32 i;
 
-	inv[0] =   m[5]*m[10]*m[15] - m[5]*m[11]*m[14] - m[9]*m[6]*m[15] 
+	inv[0] =   m[5]*m[10]*m[15] - m[5]*m[11]*m[14] - m[9]*m[6]*m[15]
 			 +   m[9]*m[7]*m[14]  + m[13]*m[6]*m[11] - m[13]*m[7]*m[10];
 	inv[4] =  -m[4]*m[10]*m[15] + m[4]*m[11]*m[14] + m[8]*m[6]*m[15]
 	       -   m[8]*m[7]*m[14]  - m[12]*m[6]*m[11] + m[12]*m[7]*m[10];
-	inv[8] =   m[4]*m[9]*m[15]  - m[4]*m[11]*m[13] - m[8]*m[5]*m[15] 
+	inv[8] =   m[4]*m[9]*m[15]  - m[4]*m[11]*m[13] - m[8]*m[5]*m[15]
 		      + m[8]*m[7]*m[13]  + m[12]*m[5]*m[11] - m[12]*m[7]*m[9];
 	inv[12] = -m[4]*m[9]*m[14]  + m[4]*m[10]*m[13] + m[8]*m[5]*m[14]
 	      	- m[8]*m[6]*m[13]  - m[12]*m[5]*m[10] + m[12]*m[6]*m[9];
-	inv[1] =  -m[1]*m[10]*m[15] + m[1]*m[11]*m[14] + m[9]*m[2]*m[15] 
+	inv[1] =  -m[1]*m[10]*m[15] + m[1]*m[11]*m[14] + m[9]*m[2]*m[15]
 		      - m[9]*m[3]*m[14]  - m[13]*m[2]*m[11] + m[13]*m[3]*m[10];
-	inv[5] =   m[0]*m[10]*m[15] - m[0]*m[11]*m[14] - m[8]*m[2]*m[15] 
+	inv[5] =   m[0]*m[10]*m[15] - m[0]*m[11]*m[14] - m[8]*m[2]*m[15]
 		      + m[8]*m[3]*m[14]  + m[12]*m[2]*m[11] - m[12]*m[3]*m[10];
-	inv[9] =  -m[0]*m[9]*m[15]  + m[0]*m[11]*m[13] + m[8]*m[1]*m[15] 
+	inv[9] =  -m[0]*m[9]*m[15]  + m[0]*m[11]*m[13] + m[8]*m[1]*m[15]
 		      - m[8]*m[3]*m[13]  - m[12]*m[1]*m[11] + m[12]*m[3]*m[9];
-	inv[13] =  m[0]*m[9]*m[14]  - m[0]*m[10]*m[13] - m[8]*m[1]*m[14] 
+	inv[13] =  m[0]*m[9]*m[14]  - m[0]*m[10]*m[13] - m[8]*m[1]*m[14]
 		      + m[8]*m[2]*m[13]  + m[12]*m[1]*m[10] - m[12]*m[2]*m[9];
-	inv[2] =   m[1]*m[6]*m[15]  - m[1]*m[7]*m[14]  - m[5]*m[2]*m[15] 
+	inv[2] =   m[1]*m[6]*m[15]  - m[1]*m[7]*m[14]  - m[5]*m[2]*m[15]
 		      + m[5]*m[3]*m[14]  + m[13]*m[2]*m[7]  - m[13]*m[3]*m[6];
-	inv[6] =  -m[0]*m[6]*m[15]  + m[0]*m[7]*m[14]  + m[4]*m[2]*m[15] 
+	inv[6] =  -m[0]*m[6]*m[15]  + m[0]*m[7]*m[14]  + m[4]*m[2]*m[15]
 		      - m[4]*m[3]*m[14]  - m[12]*m[2]*m[7]  + m[12]*m[3]*m[6];
-	inv[10] =  m[0]*m[5]*m[15]  - m[0]*m[7]*m[13]  - m[4]*m[1]*m[15] 
+	inv[10] =  m[0]*m[5]*m[15]  - m[0]*m[7]*m[13]  - m[4]*m[1]*m[15]
 		      + m[4]*m[3]*m[13]  + m[12]*m[1]*m[7]  - m[12]*m[3]*m[5];
-	inv[14] = -m[0]*m[5]*m[14]  + m[0]*m[6]*m[13]  + m[4]*m[1]*m[14] 
+	inv[14] = -m[0]*m[5]*m[14]  + m[0]*m[6]*m[13]  + m[4]*m[1]*m[14]
 		      - m[4]*m[2]*m[13]  - m[12]*m[1]*m[6]  + m[12]*m[2]*m[5];
-	inv[3] =  -m[1]*m[6]*m[11]  + m[1]*m[7]*m[10]  + m[5]*m[2]*m[11] 
+	inv[3] =  -m[1]*m[6]*m[11]  + m[1]*m[7]*m[10]  + m[5]*m[2]*m[11]
 		      - m[5]*m[3]*m[10]  - m[9]*m[2]*m[7]   + m[9]*m[3]*m[6];
-	inv[7] =   m[0]*m[6]*m[11]  - m[0]*m[7]*m[10]  - m[4]*m[2]*m[11] 
+	inv[7] =   m[0]*m[6]*m[11]  - m[0]*m[7]*m[10]  - m[4]*m[2]*m[11]
 		      + m[4]*m[3]*m[10]  + m[8]*m[2]*m[7]   - m[8]*m[3]*m[6];
-	inv[11] = -m[0]*m[5]*m[11]  + m[0]*m[7]*m[9]   + m[4]*m[1]*m[11] 
+	inv[11] = -m[0]*m[5]*m[11]  + m[0]*m[7]*m[9]   + m[4]*m[1]*m[11]
 		      - m[4]*m[3]*m[9]   - m[8]*m[1]*m[7]   + m[8]*m[3]*m[5];
-	inv[15] =  m[0]*m[5]*m[10]  - m[0]*m[6]*m[9]   - m[4]*m[1]*m[10] 
+	inv[15] =  m[0]*m[5]*m[10]  - m[0]*m[6]*m[9]   - m[4]*m[1]*m[10]
 		      + m[4]*m[2]*m[9]   + m[8]*m[1]*m[6]   - m[8]*m[2]*m[5];
 
 	det = m[0]*inv[0] + m[1]*inv[4] + m[2]*inv[8] + m[3]*inv[12];
@@ -952,21 +952,24 @@ ZMATHDEF void print_mat4x4(Matrix4x4_t m) {
 #endif // ZEN_MATH_IMPLEMENTATION
 
 
-// Public Domain (www.unlicense.org)
-// This is free and unencumbered software released into the public domain.
-// Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
-// software, either in source code form or as a compiled binary, for any purpose, 
-// commercial or non-commercial, and by any means.
-// In jurisdictions that recognize copyright laws, the author or authors of this 
-// software dedicate any and all copyright interest in the software to the public 
-// domain. We make this dedication for the benefit of the public at large and to 
-// the detriment of our heirs and successors. We intend this dedication to be an 
-// overt act of relinquishment in perpetuity of all present and future rights to 
-// this software under copyright law.
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-// AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
-// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
-// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-//
+/*
+  zlib license:
+
+  Copyright (c) 2017 Timothy Wright https://github.com/ZenToad
+
+  This software is provided 'as-is', without any express or implied
+  warranty. In no event will the authors be held liable for any damages
+  arising from the use of this software.
+
+  Permission is granted to anyone to use this software for any purpose,
+  including commercial applications, and to alter it and redistribute it
+  freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+*/

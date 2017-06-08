@@ -1,11 +1,19 @@
-// zen_arr.h
-//
-// 
-// #define ZEN_ARR_IMPLEMENTATION
-// #include "zen_arr.h"
-//
-// Contains stb_arr and stretchy buffer
-//
+/* zen_arr.h - v0.42 - Arrays -https://github.com/ZenToad/zen
+
+   Do this:
+      #define ZEN_ARR_IMPLEMENTATION
+   before you include this file in *one* C or C++ file to create the implementation.
+   // i.e. it should look like this:
+   #include ...
+   #include ...
+   #include ...
+   #define ZEN_ARR_IMPLEMENTATION
+   #include "zen_arr.h"
+
+   This is stb_arr and stretchy_buffer
+	 Full license at bottom of file.
+
+*/
 
 
 #if !defined(__ZEN_ARR_H__)
@@ -129,7 +137,7 @@ typedef struct {
 #define stb_arr_len2(a)        ((stb__arr *) (a) ? stb_arrhead2(a)->len : 0)
 #define stb_arr_lastn(a)       (stb_arr_len(a)-1)
 
-// check whether a given index is valid -- tests 0 <= i < stb_arr_len(a) 
+// check whether a given index is valid -- tests 0 <= i < stb_arr_len(a)
 #define stb_arr_valid(a,i)     (a ? (int) (i) < stb_arrhead(a)->len : 0)
 
 // change the array length so is is exactly N entries long, creating
@@ -272,7 +280,7 @@ static void * stb__sbgrowf(void *arr, int increment, int itemsize) {
    }
 }
 
-//------------------------------------------ 
+//------------------------------------------
 //
 // stb_arr implementation
 //
@@ -416,3 +424,21 @@ ZARRDEF void stb__arr_deleten_(void **pp, int size, int i, int n) {
 
 
 #endif // ZEN_ARR_IMPLEMENTATION
+
+// Public Domain (www.unlicense.org)
+// This is free and unencumbered software released into the public domain.
+// Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+// software, either in source code form or as a compiled binary, for any purpose,
+// commercial or non-commercial, and by any means.
+// In jurisdictions that recognize copyright laws, the author or authors of this
+// software dedicate any and all copyright interest in the software to the public
+// domain. We make this dedication for the benefit of the public at large and to
+// the detriment of our heirs and successors. We intend this dedication to be an
+// overt act of relinquishment in perpetuity of all present and future rights to
+// this software under copyright law.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

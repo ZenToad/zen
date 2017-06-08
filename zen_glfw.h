@@ -1,3 +1,20 @@
+/* zen_glfw.h - v0.42 - GLFW wrapper -https://github.com/ZenToad/zen
+
+   Do this:
+      #define ZEN_GLFW_IMPLEMENTATION
+   before you include this file in *one* C or C++ file to create the implementation.
+   // i.e. it should look like this:
+   #include ...
+   #include ...
+   #include ...
+   #define ZEN_GLFW_IMPLEMENTATION
+   #include "zen_glfw.h"
+
+   zlib license:
+	 Full license at bottom of file.
+
+*/
+
 #ifndef __ZEN_GLFW_H__
 #define __ZEN_GLFW_H__
 
@@ -11,7 +28,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif 
+#endif
 
 
 #if defined(ZEN_LIB_DEV)
@@ -61,7 +78,7 @@ typedef struct ZGLFW {
 	float last_mouse_y;
 	float mouse_scroll;
 	int mouse_button[3];
- 
+
    GLFWwindow* window;
 
    void (*error_callback)(int, const char*);
@@ -88,7 +105,7 @@ ZGLFWDEF void zglfw_destroy(ZGLFW *glfw);
 
 #ifdef __cplusplus
 }
-#endif 
+#endif
 
 
 
@@ -96,18 +113,18 @@ ZGLFWDEF void zglfw_destroy(ZGLFW *glfw);
 
 
 
-//------------------------------------------ 
+//------------------------------------------
 // Implementation
-//------------------------------------------ 
+//------------------------------------------
 //
-#if defined(ZEN_GLFW_IMPLEMENTATION) || defined(ZEN_LIB_DEV) 
+#if defined(ZEN_GLFW_IMPLEMENTATION) || defined(ZEN_LIB_DEV)
 
 
 #if defined(ZEN_LIB_DEV)
 #include <stdio.h>
 #include "zen_lib/zen.h"
 #endif
- 
+
 
 typedef void* (* GLADloadproc)(const char *name);
 int gladLoadGLLoader(GLADloadproc load);
@@ -285,8 +302,8 @@ ZGLFWDEF void zglfw_begin(ZGLFW *glfw) {
 	glfw->last_mouse_y = glfw->mouse_y;
 	glfw->mouse_x = cast(float)x;
 	glfw->mouse_y = cast(float)y;
-	glfw->mouse_dx = glfw->mouse_x - glfw->last_mouse_x; 
-	glfw->mouse_dy = glfw->mouse_y - glfw->last_mouse_y; 
+	glfw->mouse_dx = glfw->mouse_x - glfw->last_mouse_x;
+	glfw->mouse_dy = glfw->mouse_y - glfw->last_mouse_y;
 
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -312,7 +329,7 @@ ZGLFWDEF void zglfw_end(ZGLFW *glfw) {
 	for (int i = 32; i < GLFW_KEY_LAST; ++i) {
 		if (glfw->keys[i]) {
 			glfw->keys[i]++;
-		} 
+		}
 	}
 
 	for (int i = 0; i < 3; ++i) {
@@ -337,3 +354,24 @@ ZGLFWDEF void zglfw_quit(ZGLFW *glfw) {
 
 #endif // ZEN_GLFW_IMPLEMENTATION
 
+/*
+  zlib license:
+
+  Copyright (c) 2017 Timothy Wright https://github.com/ZenToad
+
+  This software is provided 'as-is', without any express or implied
+  warranty. In no event will the authors be held liable for any damages
+  arising from the use of this software.
+
+  Permission is granted to anyone to use this software for any purpose,
+  including commercial applications, and to alter it and redistribute it
+  freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+*/

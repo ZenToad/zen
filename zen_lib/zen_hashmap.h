@@ -1,3 +1,20 @@
+/* zen_hashmap.h - v0.42 - Arrays -https://github.com/ZenToad/zen
+
+   Do this:
+      #define ZEN_ARR_IMPLEMENTATION
+   before you include this file in *one* C or C++ file to create the implementation.
+   // i.e. it should look like this:
+   #include ...
+   #include ...
+   #include ...
+   #define ZEN_HASHMAP_IMPLEMENTATION
+   #include "zen_hashmap.h"
+
+   This is stb_arr and stretchy_buffer
+	 Full license at bottom of file.
+
+*/
+
 //////////////////////////////////////////////////////////////////////////////
 //
 //                     Instantiated data structures
@@ -24,12 +41,12 @@
 #if 0
 
 stb_declare_hash(extern "C", zen_hash_t, zen_hash_, const char*, const char*);
-stb_define_hash_vnull(zen_hash_t, zen_hash_, const char*, NULL, NULL, return default_hash(k);, const char*, NULL); 
- 
+stb_define_hash_vnull(zen_hash_t, zen_hash_, const char*, NULL, NULL, return default_hash(k);, const char*, NULL);
+
 
 void lets_try_stb_hashmap() {
 
-	zen_hash_t *hash = zen_hash_create();	
+	zen_hash_t *hash = zen_hash_create();
 	zen_hash_init(hash, 512);
 
 	ziout(zen_hash_set(hash, "key1", "value1"));
@@ -112,7 +129,7 @@ extern "C" {
 
 #define STB_nocopy(x)        (x)
 #define STB_nodelete(x)      0
-#define STB_nofields         
+#define STB_nofields
 #define STB_nonullvalue(x)
 #define STB_nullvalue(x)     x
 #define STB_safecompare(x)   x
@@ -432,7 +449,7 @@ static void STB_(N, rehash)(TYPE *a, int count)                               \
 
 
 //------------------------------------------
-// 
+//
 // Implementation
 //
 //
@@ -568,4 +585,20 @@ ZHASHDEV unsigned int stb_hash_number(unsigned int hash)
 
 #endif //ZEN_HASHMAP_IMPLEMENTATION
 
-
+// Public Domain (www.unlicense.org)
+// This is free and unencumbered software released into the public domain.
+// Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+// software, either in source code form or as a compiled binary, for any purpose,
+// commercial or non-commercial, and by any means.
+// In jurisdictions that recognize copyright laws, the author or authors of this
+// software dedicate any and all copyright interest in the software to the public
+// domain. We make this dedication for the benefit of the public at large and to
+// the detriment of our heirs and successors. We intend this dedication to be an
+// overt act of relinquishment in perpetuity of all present and future rights to
+// this software under copyright law.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

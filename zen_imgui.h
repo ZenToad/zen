@@ -1,3 +1,19 @@
+/* zen_imgui.h - v0.42 - GLFW imgui implementation -https://github.com/ZenToad/zen
+
+   Do this:
+      #define ZEN_IMGUI_IMPLEMENTATION
+   before you include this file in *one* C or C++ file to create the implementation.
+   // i.e. it should look like this:
+   #include ...
+   #include ...
+   #include ...
+   #define ZEN_IMGUI_IMPLEMENTATION
+   #include "zen_imgui.h"
+
+	Full license at bottom of file.
+
+*/
+
 #ifndef __ZEN_IMGUI_H__
 #define __ZEN_IMGUI_H__
 
@@ -29,7 +45,7 @@ ZIMGUIDEF void zen_imgui_quit();
 #include "zen_glfw.h"
 #include "imgui.h"
 #endif
-  
+
 typedef struct ZenImguiState_t {
 
 	GLuint vbo;
@@ -49,7 +65,7 @@ static ImFont* __zen_imgui_default_font;
 ZIMGUIDEF void zen_imgui_begin(ZGLFW *glfw) {
 
 	ImGuiIO& io = ImGui::GetIO();
-	
+
 	// Setup display size (every frame to accommodate for window resizing)
 	int w = glfw->window_width;
 	int h = glfw->window_height;
@@ -65,7 +81,7 @@ ZIMGUIDEF void zen_imgui_begin(ZGLFW *glfw) {
 	// (we already got mouse wheel, keyboard keys & characters from glfw callbacks polled in glfwPollEvents())
 	// Mouse position in screen coordinates (set to -1,-1 if no mouse / on another screen, etc.)
 	if (glfwGetWindowAttrib(glfw->window, GLFW_FOCUSED)) {
-		io.MousePos = ImVec2(glfw->mouse_x, glfw->mouse_y);   
+		io.MousePos = ImVec2(glfw->mouse_x, glfw->mouse_y);
 	} else {
 		io.MousePos = ImVec2(-1,-1);
 	}
@@ -110,13 +126,13 @@ static void zen_imgui_create_font() {
 	ImGuiIO& io = ImGui::GetIO();
 	unsigned char* pixels;
 	int width, height;
-	// Load as RGBA 32-bits (75% of the memory is wasted, but default font is so small) because it is more likely 
-	// to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept 
+	// Load as RGBA 32-bits (75% of the memory is wasted, but default font is so small) because it is more likely
+	// to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept
 	// than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
 	__zen_imgui_default_font = io.Fonts->AddFontDefault();
 	//__zen_imgui_custion_font = io.Fonts->AddFontFromFileTTF("res/PressStart2P.ttf", 16);
 
-	io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   
+	io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
 	// Upload texture to graphics system
 	GLint last_texture;
@@ -162,7 +178,7 @@ ZIMGUIDEF void zen_imgui_render(ImDrawData* draw_data) {
 	GLint last_blend_equation_rgb; glGetIntegerv(GL_BLEND_EQUATION_RGB, &last_blend_equation_rgb);
 	GLint last_blend_equation_alpha; glGetIntegerv(GL_BLEND_EQUATION_ALPHA, &last_blend_equation_alpha);
 	GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
-	GLint last_scissor_box[4]; glGetIntegerv(GL_SCISSOR_BOX, last_scissor_box); 
+	GLint last_scissor_box[4]; glGetIntegerv(GL_SCISSOR_BOX, last_scissor_box);
 	GLboolean last_enable_blend = glIsEnabled(GL_BLEND);
 	GLboolean last_enable_cull_face = glIsEnabled(GL_CULL_FACE);
 	GLboolean last_enable_depth_test = glIsEnabled(GL_DEPTH_TEST);
@@ -312,7 +328,7 @@ ZIMGUIDEF void zen_imgui_init(ZGLFW *glfw) {
 
 	// Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
 	ImGuiIO& io = ImGui::GetIO();
-	io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;                         
+	io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;
 	io.KeyMap[ImGuiKey_LeftArrow] = GLFW_KEY_LEFT;
 	io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;
 	io.KeyMap[ImGuiKey_UpArrow] = GLFW_KEY_UP;
@@ -332,9 +348,9 @@ ZIMGUIDEF void zen_imgui_init(ZGLFW *glfw) {
 	io.KeyMap[ImGuiKey_Y] = GLFW_KEY_Y;
 	io.KeyMap[ImGuiKey_Z] = GLFW_KEY_Z;
 
-	// Alternatively you can set this to NULL and call ImGui::GetDrawData() 
+	// Alternatively you can set this to NULL and call ImGui::GetDrawData()
 	// after ImGui::Render() to get the same ImDrawData pointer.
-	io.RenderDrawListsFn = zen_imgui_render;       
+	io.RenderDrawListsFn = zen_imgui_render;
 	io.SetClipboardTextFn = zen_imgui_default_set_clipboard_callback;
 	io.GetClipboardTextFn = zen_imgui_default_get_clipboard_callback;
 	io.ClipboardUserData = glfw->window;
@@ -347,6 +363,20 @@ ZIMGUIDEF void zen_imgui_init(ZGLFW *glfw) {
 
 #endif //ZEN_IMGUI_IMPLEMENTATION
 
-
-
-
+// Public Domain (www.unlicense.org)
+// This is free and unencumbered software released into the public domain.
+// Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+// software, either in source code form or as a compiled binary, for any purpose,
+// commercial or non-commercial, and by any means.
+// In jurisdictions that recognize copyright laws, the author or authors of this
+// software dedicate any and all copyright interest in the software to the public
+// domain. We make this dedication for the benefit of the public at large and to
+// the detriment of our heirs and successors. We intend this dedication to be an
+// overt act of relinquishment in perpetuity of all present and future rights to
+// this software under copyright law.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.

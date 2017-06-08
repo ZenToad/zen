@@ -1,3 +1,20 @@
+/* zen_sdl.h - v0.42 - SDL wrapper -https://github.com/ZenToad/zen
+
+   Do this:
+      #define ZEN_SDL_IMPLEMENTATION
+   before you include this file in *one* C or C++ file to create the implementation.
+   // i.e. it should look like this:
+   #include ...
+   #include ...
+   #include ...
+   #define ZEN_SDL_IMPLEMENTATION
+   #include "zen_sdl.h"
+
+	 zlib license:
+	 Full license at bottom of file.
+
+*/
+
 #if !defined(__ZEN_SDL_H__)
 #define __ZEN_SDL_H__
 
@@ -62,7 +79,7 @@ typedef struct SDL_Zen {
 	float last_mouse_y;
 	float mouse_scroll;
 	int mouse_button[3];
- 
+
    SDL_Window* window;
 	enum { SDL_ZEN_KEY_LAST = SDL_SCANCODE_APP2 };
 	int keys[SDL_ZEN_KEY_LAST];
@@ -86,6 +103,16 @@ ZSDL_DEF void SDL_Zen_Destroy(SDL_Zen *sdl);
 #if defined(__cplusplus)
 }
 #endif
+
+#endif // __ZEN_SDL_H__
+
+
+//------------------------------------------
+//
+// Implementation
+//
+//------------------------------------------
+#if defined(ZEN_SDL_IMPLEMENTATION)
 
 
 void SDL_Zen_default_window_size_callback(SDL_Zen *sdl, int width, int height) {
@@ -127,7 +154,7 @@ ZSDL_DEF void SDL_Zen_Destroy(SDL_Zen *sdl) {
 
 void SDL_Zen_Init(SDL_Zen *sdl) {
 
-	// Initialize SDL 
+	// Initialize SDL
 	if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
 		sdl_die("Couldn't initialize SDL");
 
@@ -142,15 +169,15 @@ void SDL_Zen_Init(SDL_Zen *sdl) {
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
 	// Create the window
-	sdl->window = SDL_CreateWindow( sdl->window_title, 
-		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
+	sdl->window = SDL_CreateWindow( sdl->window_title,
+		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 		sdl->window_width, sdl->window_height, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN | SDL_WINDOW_OPENGL
 	);
-	if (sdl->window == NULL) 
+	if (sdl->window == NULL)
 		sdl_die("Couldn't set video mode");
 
 	SDL_GLContext maincontext = SDL_GL_CreateContext(sdl->window);
-	if (maincontext == NULL) 
+	if (maincontext == NULL)
 		sdl_die("Failed to create OpenGL context");
 
 	// Check OpenGL properties
@@ -297,14 +324,25 @@ ZSDL_DEF void SDL_Zen_Quit(SDL_Zen *sdl) {
 }
 
 
-#endif // __ZEN_SDL_H__
-
-//------------------------------------------ 
-//
-// Implementation
-//
-//------------------------------------------ 
-#if defined(ZEN_SDL_IMPLEMENTATION)
-
-
 #endif
+/*
+  zlib license:
+
+  Copyright (c) 2017 Timothy Wright https://github.com/ZenToad
+
+  This software is provided 'as-is', without any express or implied
+  warranty. In no event will the authors be held liable for any damages
+  arising from the use of this software.
+
+  Permission is granted to anyone to use this software for any purpose,
+  including commercial applications, and to alter it and redistribute it
+  freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+*/

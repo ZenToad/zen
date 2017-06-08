@@ -1,5 +1,4 @@
-/* zen_gl.h - v0.42 - public domain opengl wrapper -https://github.com/ZenToad/zen
-                                     no warranty implied; use at your own risk
+/* zen_gl.h - v0.42 - opengl wrapper -https://github.com/ZenToad/zen
 
    Do this:
       #define ZEN_GL_IMPLEMENTATION
@@ -13,7 +12,8 @@
 
 	Very hacked up version of Ginger Bill's code: https://github.com/gingerBill/gb
 
-	Full license at bottom of file.	
+	zlib license:
+	Full license at bottom of file.
 
 */
 
@@ -41,7 +41,7 @@ extern "C" {
 #include "zen.h"
 #include "stb_truetype.h"
 #endif
- 
+
 typedef enum ZGLShaderType {
 	ZGL_VERTEX_SHADER,
 	ZGL_FRAGMENT_SHADER,
@@ -86,7 +86,7 @@ typedef union ZGLColor {
 typedef struct ZGLBasicVertex {
 	float x, y;
 	float u, v;
-} ZGLBasicVertex;  
+} ZGLBasicVertex;
 
 
 typedef struct ZGLTexture {
@@ -95,7 +95,7 @@ typedef struct ZGLTexture {
 } ZGLTexture;
 
 typedef struct ZGLFont {
-	
+
 	int32 atlas_width;
 	int32 atlas_height;
 	int32 char_start;
@@ -113,9 +113,9 @@ typedef struct ZGLBasicState {
 	ZGLBasicVertex vertices[ZGL_BS_MAX_VERTEX_COUNT];
 	uint16 indices[ZGL_BS_MAX_INDEX_COUNT];
 
-	ZGLShader ortho_col_shader;	
-	ZGLShader ortho_tex_shader;	
-	ZGLShader ortho_font_shader;	
+	ZGLShader ortho_col_shader;
+	ZGLShader ortho_tex_shader;
+	ZGLShader ortho_font_shader;
 	uint32 vao;
 	uint32 vbo;
 	uint32 ebo;
@@ -135,7 +135,7 @@ typedef struct ZGLBasicState {
 
 #ifdef ZEN_GL_STATIC
 #define ZGLDEF static
-#else 
+#else
 #define ZGLDEF extern
 #endif
 
@@ -152,7 +152,7 @@ ZGLDEF void zgl_bs_draw_line(ZGLBasicState *bs, float mv[16], float x0, float y0
 ZGLDEF void zgl_bs_fill_rect(ZGLBasicState *bs, float mv[16], float x, float y, float w, float h, ZGLColor col);
 ZGLDEF void zgl_bs_fill_quad(ZGLBasicState *bs, float mv[16], float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3, ZGLColor col);
 ZGLDEF void zgl_bs_fill_circle(ZGLBasicState *bs, float mv[16], float cx, float cy, float r, ZGLColor color);
- 
+
 ZGLDEF  b32 zgl_load_texture2d_from_memory(ZGLTexture *tex, void const *data, int32 width, int32 height, int32 channel_count);
 ZGLDEF  b32 zgl_load_texture2d_from_file(ZGLTexture *texture, b32 flip_vertically, char const *filename);
 ZGLDEF void zgl_bs_draw_textured_rect(ZGLBasicState *bs, ZGLTexture *tex, float mv[16], float x, float y, float w, float h, b32 v_up);
@@ -180,7 +180,7 @@ ZGLDEF void zgl_draw_string(ZGLBasicState *bs, const char* text, float *x, float
 #include "glad/glad.h"
 #include "stb_image.h"
 #endif
- 
+
 #define zgl_vert_ptr_aa(index, element_count, Type, var_name) \
     zgl_vert_ptr_aa_float(index, element_count, Type, var_name)
 
@@ -217,7 +217,7 @@ ZGLDEF void zgl_draw_string(ZGLBasicState *bs, const char* text, float *x, float
 
 static char zgl_err_buf[1024];
 
- 
+
 int32 const zglInternalTextureFormat_8[4]  = { GL_R8,   GL_RG8,   GL_RGB8,	  GL_RGBA8   };
 int32 const zglTextureFormat[4] = { GL_RED, GL_RG, GL_RGB, GL_RGBA };
 
@@ -688,8 +688,8 @@ ZGLDEF void zgl_bs_draw_textured_rect(ZGLBasicState *bs, ZGLTexture *tex, float 
 }
 
 ZGLDEF void zgl_bs_draw_textured_subrect(
-		ZGLBasicState *bs, ZGLTexture *tex, float mv[16], 
-		float x0, float y0, float x1, float y1, 
+		ZGLBasicState *bs, ZGLTexture *tex, float mv[16],
+		float x0, float y0, float x1, float y1,
 		float u0, float v0, float u1, float v1,b32 v_up) {
 
 	bs->vertices[0].x = x0;
@@ -786,8 +786,8 @@ ZGLDEF b32 zgl_load_font(ZGLBasicState *bs, const char *filename, float size_in_
 	bs->font.char_count = 96;
 	bs->font.type_flag = 1; // 1 = OpenGL
 	bs->font.size_in_pixels = size_in_pixels;
-   stbtt_BakeFontBitmap(ttf_buffer, 0, 
-			bs->font.size_in_pixels, temp_bitmap, bs->font.atlas_width, bs->font.atlas_height, 
+   stbtt_BakeFontBitmap(ttf_buffer, 0,
+			bs->font.size_in_pixels, temp_bitmap, bs->font.atlas_width, bs->font.atlas_height,
 			bs->font.char_start, bs->font.char_count, bs->font.cdata);
 	fclose(file);
 
@@ -805,7 +805,7 @@ ZGLDEF void zgl_draw_string(ZGLBasicState *bs, const char* text, float *x, float
 	zgl_set_uniform_colour(&bs->ortho_font_shader, "u_color", color);
 	for(isize i = 0; i < len; ++i) {
 		stbtt_GetBakedQuad(
-				bs->font.cdata, bs->font.atlas_width, bs->font.atlas_height, 
+				bs->font.cdata, bs->font.atlas_width, bs->font.atlas_height,
 				text[i] - bs->font.char_start, x, y, &q, bs->font.type_flag
 		);
 
@@ -859,7 +859,7 @@ ZGLDEF void zgl_bs_initialize(ZGLBasicState *bs) {
 	memset(bs, 0, zen_sizeof(ZGLBasicState));
 
 	// turn on debugging
-	glEnable(GL_DEBUG_OUTPUT); 
+	glEnable(GL_DEBUG_OUTPUT);
 	glDebugMessageCallback(zgl_error_callback, NULL);
 	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, 0, GL_FALSE);
 
@@ -886,7 +886,7 @@ ZGLDEF void zgl_bs_initialize(ZGLBasicState *bs) {
 	//TODO(tim): Need support for textured quads
 	//TODO(tim): Need to get fonts working for real
 
-	b32 result = zgl_create_shader(&bs->ortho_col_shader, 
+	b32 result = zgl_create_shader(&bs->ortho_col_shader,
 		"#version 420 core\n"
 		"precision mediump float;"
 		"layout (location = 0) in vec4 a_position;\n"
@@ -963,20 +963,24 @@ ZGLDEF void zgl_bs_initialize(ZGLBasicState *bs) {
 
 #endif // ZEN_GL_IMPLEMENTATION
 
-// Public Domain (www.unlicense.org)
-// This is free and unencumbered software released into the public domain.
-// Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
-// software, either in source code form or as a compiled binary, for any purpose, 
-// commercial or non-commercial, and by any means.
-// In jurisdictions that recognize copyright laws, the author or authors of this 
-// software dedicate any and all copyright interest in the software to the public 
-// domain. We make this dedication for the benefit of the public at large and to 
-// the detriment of our heirs and successors. We intend this dedication to be an 
-// overt act of relinquishment in perpetuity of all present and future rights to 
-// this software under copyright law.
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-// AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
-// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
-// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+/*
+  zlib license:
+
+  Copyright (c) 2017 Timothy Wright https://github.com/ZenToad
+
+  This software is provided 'as-is', without any express or implied
+  warranty. In no event will the authors be held liable for any damages
+  arising from the use of this software.
+
+  Permission is granted to anyone to use this software for any purpose,
+  including commercial applications, and to alter it and redistribute it
+  freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+*/

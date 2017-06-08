@@ -1,3 +1,20 @@
+/* zen_glez.h - v0.42 - Easy OpenGL -https://github.com/ZenToad/zen
+
+   Do this:
+      #define ZEN_GLEZ_IMPLEMENTATION
+   before you include this file in *one* C or C++ file to create the implementation.
+   // i.e. it should look like this:
+   #include ...
+   #include ...
+   #include ...
+   #define ZEN_GLEZ_IMPLEMENTATION
+   #include "zen_glez.h"
+
+	 zlib license:
+   Full license at bottom of file.
+
+*/
+
 #if !defined(__ZEN_GLEZ_H__)
 #define __ZEN_GLEZ_H__
 
@@ -16,7 +33,7 @@
 #if !defined(ZGLEZ_FONT_HEIGHT)
 #define ZGLEZ_FONT_HEIGHT	2048
 #endif
- 
+
 
 #if defined(ZEN_GLEZ_STATIC)
 #define ZGLEZDEF static
@@ -69,13 +86,13 @@ ZGLEZDEF void zglez_draw_text(const char *name, const char *string, Vector2_t po
 #endif // __ZEN_GLEZ_H__
 
 
-//------------------------------------------ 
+//------------------------------------------
 //
 //
 // IMPLEMENTATION
 //
 //
-//------------------------------------------ 
+//------------------------------------------
 #if defined(ZEN_GLEZ_IMPLEMENTATION) || defined(ZEN_LIB_DEV)
 
 
@@ -115,7 +132,7 @@ typedef struct zglez_texture_t {
 
 
 stb_declare_hash(static, zglez_texture_map, zglez_texmap_, const char*, zglez_texture_t*);
-stb_define_hash_vnull(zglez_texture_map, zglez_texmap_, const char*, NULL, NULL, return stb_hash((char *)k);, zglez_texture_t*, NULL); 
+stb_define_hash_vnull(zglez_texture_map, zglez_texmap_, const char*, NULL, NULL, return stb_hash((char *)k);, zglez_texture_t*, NULL);
 
 
 typedef struct zglez_font_t {
@@ -134,20 +151,20 @@ typedef struct zglez_font_t {
 
 
 stb_declare_hash(static, zglez_font_map, zglez_fontmap_, const char*, zglez_font_t*);
-stb_define_hash_vnull(zglez_font_map, zglez_fontmap_, const char*, NULL, NULL, return stb_hash((char*)k);, zglez_font_t*, NULL); 
+stb_define_hash_vnull(zglez_font_map, zglez_fontmap_, const char*, NULL, NULL, return stb_hash((char*)k);, zglez_font_t*, NULL);
 
 
 typedef struct zglez_points {
- 
+
 	enum { max_vertices = 512 };
 	Vector3_t vertices[max_vertices];
 	Colorf_t colors[max_vertices];
 	float sizes[max_vertices];
- 
+
 	Matrix4x4_t projection;
 
 	int32 count;
-    
+
 	GLuint vao_id;
 	GLuint vbo_ids[3];
 	GLuint program_id;
@@ -161,15 +178,15 @@ static zglez_points *g_zglez_points = 0;
 
 
 typedef struct zglez_lines {
- 
+
 	enum { max_vertices = 512 * 2 };
 	Vector3_t vertices[max_vertices];
 	Colorf_t colors[max_vertices];
- 
+
 	Matrix4x4_t projection;
 
 	int32 count;
-    
+
 	GLuint vao_id;
 	GLuint vbo_ids[2];
 	GLuint program_id;
@@ -182,15 +199,15 @@ static zglez_lines *g_zglez_lines = 0;
 
 
 typedef struct zglez_triangles {
- 
+
 	enum { max_vertices = 512 * 3 };
 	Vector3_t vertices[max_vertices];
 	Colorf_t colors[max_vertices];
- 
+
 	Matrix4x4_t projection;
 
 	int32 count;
-    
+
 	GLuint vao_id;
 	GLuint vbo_ids[2];
 	GLuint program_id;
@@ -314,7 +331,7 @@ static GLuint zglez_create_shader_program(const char* vs, const char* fs) {
 	GLint status = GL_FALSE;
 	glGetProgramiv(program_id, GL_LINK_STATUS, &status);
 	GB_ASSERT(status != GL_FALSE);
-	
+
 	return program_id;
 }
 
@@ -387,8 +404,8 @@ static void zgles_create_points() {
 	glUseProgram(0);
 
 	points->count = 0;
-	
-}	
+
+}
 
 
 static void zglez_flush_points() {
@@ -462,7 +479,7 @@ static void zglez_destroy_points() {
 
 static void zglez_create_lines() {
 
-	g_zglez_lines = ZEN_CALLOC(zglez_lines, 1); 
+	g_zglez_lines = ZEN_CALLOC(zglez_lines, 1);
 	GB_ASSERT_NOT_NULL(g_zglez_lines);
 	zglez_lines *lines = g_zglez_lines;
 
@@ -520,8 +537,8 @@ static void zglez_create_lines() {
 	glUseProgram(0);
 
 	lines->count = 0;
-	
-}	
+
+}
 
 
 static void zglez_flush_lines() {
@@ -647,8 +664,8 @@ static void zglez_create_triangles() {
 	glUseProgram(0);
 
 	triangles->count = 0;
-	
-}	
+
+}
 
 
 static void zglez_flush_triangles() {
@@ -855,7 +872,7 @@ static void zglez_destroy_textures() {
 	zglez_texture_map *map = g_zglez_textures->map;
 	for (int i = 0; i < map->limit; ++i) {
 		if (map->table[i].k)
-			stb_arr_push(keys, map->table[i].k);	
+			stb_arr_push(keys, map->table[i].k);
 	}
 
 	zglez_texture_t *texture;
@@ -917,8 +934,8 @@ ZGLEZDEF int zglez_load_texture_from_memory(const char *name, void const *memory
 	GB_ASSERT(GL_MAX_TEXTURE_SIZE > height);
 
 	glTexImage2D(
-		GL_TEXTURE_2D, 0, zglez_internal_texture_format[channel_count-1], 
-		width, height, 0, zglez_texture_format[channel_count-1], 
+		GL_TEXTURE_2D, 0, zglez_internal_texture_format[channel_count-1],
+		width, height, 0, zglez_texture_format[channel_count-1],
 		GL_UNSIGNED_BYTE, memory);
 
 	glGenerateMipmap(GL_TEXTURE_2D);
@@ -964,7 +981,7 @@ ZGLEZDEF void zglez_unload_all_textures() {
 	zglez_texture_map *map = g_zglez_textures->map;
 	for (int i = 0; i < map->limit; ++i) {
 		if (map->table[i].k)
-			stb_arr_push(keys, map->table[i].k);	
+			stb_arr_push(keys, map->table[i].k);
 	}
 
 	zglez_texture_t *texture = NULL;
@@ -981,7 +998,7 @@ ZGLEZDEF void zglez_unload_all_textures() {
 
 ZGLEZDEF void zglez_create_fonts() {
 
-	g_zglez_fonts = ZEN_CALLOC(zglez_fonts, 1);	
+	g_zglez_fonts = ZEN_CALLOC(zglez_fonts, 1);
 	GB_ASSERT_NOT_NULL(g_zglez_fonts);
 	zglez_fonts *fonts = g_zglez_fonts;
 
@@ -1119,7 +1136,7 @@ static void zglez_destroy_fonts() {
 	zglez_font_map *map = fonts->map;
 	for (int i = 0; i < map->limit; ++i) {
 		if (map->table[i].k)
-			stb_arr_push(keys, map->table[i].k);	
+			stb_arr_push(keys, map->table[i].k);
 	}
 
 	zglez_font_t *font;
@@ -1148,7 +1165,7 @@ static void zglez_destroy_fonts() {
 }
 
 
-ZGLEZDEF int zglez_load_font_from_memory(const char *name, unsigned char *memory, isize size_in_bytes, 
+ZGLEZDEF int zglez_load_font_from_memory(const char *name, unsigned char *memory, isize size_in_bytes,
 		int pixel_size, int padding, int oversample) {
 
 	zglez_font_map *map = g_zglez_fonts->map;
@@ -1207,7 +1224,7 @@ ZGLEZDEF int zglez_load_font_from_memory(const char *name, unsigned char *memory
 	GB_ASSERT(GL_MAX_TEXTURE_SIZE > font->height);
 
 	glTexImage2D(
-		GL_TEXTURE_2D, 0, GL_RED, font->width, font->height, 
+		GL_TEXTURE_2D, 0, GL_RED, font->width, font->height,
 		0, GL_RED, GL_UNSIGNED_BYTE, texture_data
 	);
 	free(texture_data);
@@ -1239,7 +1256,7 @@ ZGLEZDEF void zglez_unload_all_fonts() {
 	zglez_font_map *map = g_zglez_fonts->map;
 	for (int i = 0; i < map->limit; ++i) {
 		if (map->table[i].k)
-			stb_arr_push(keys, map->table[i].k);	
+			stb_arr_push(keys, map->table[i].k);
 	}
 
 	zglez_font_t *font = NULL;
@@ -1427,7 +1444,7 @@ static int zglez_get_char_index(int ch) {
 	if (ch >= ascii_start && ch <= ascii_end) {
 		return ch - ascii_start;
 	} else if(ch >= ext_start && ch <= ext_end) {
-		return ch - ext_start + ascii_count;	
+		return ch - ext_start + ascii_count;
 	} else {
 		return -1;
 	}
@@ -1514,3 +1531,25 @@ ZGLEZDEF void zglez_quit() {
 
 
 #endif
+
+/*
+  zlib license:
+
+  Copyright (c) 2017 Timothy Wright https://github.com/ZenToad
+
+  This software is provided 'as-is', without any express or implied
+  warranty. In no event will the authors be held liable for any damages
+  arising from the use of this software.
+
+  Permission is granted to anyone to use this software for any purpose,
+  including commercial applications, and to alter it and redistribute it
+  freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+*/

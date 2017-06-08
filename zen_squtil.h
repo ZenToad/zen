@@ -1,8 +1,19 @@
-/*
- * squtil - version 0.1
- *
- * This is a utility file to help with squirrel script
- */
+/* zen_squtil.h - v0.42 - Squirrel Lang wrapper -https://github.com/ZenToad/zen
+
+   Do this:
+      #define SQUTIL_IMPLEMENTATION
+   before you include this file in *one* C or C++ file to create the implementation.
+   // i.e. it should look like this:
+   #include ...
+   #include ...
+   #include ...
+   #define SQUTIL_IMPLEMENTATION
+   #include "zen_squtil.h"
+
+	 zlib license:
+	 Full license at bottom of file.
+
+*/
 
 #ifndef SQUTIL_H
 #define SQUTIL_H
@@ -17,7 +28,7 @@
 extern "C" {
 #endif
 
-#include <squirrel.h> 
+#include <squirrel.h>
 
 // definitions go here...
 SQUTIL_DEF SQRESULT set_table_int(HSQUIRRELVM v, const char* table, const char* key, SQInteger value);
@@ -40,8 +51,8 @@ SQUTIL_DEF void call_func( HSQUIRRELVM v, const char* func );
 #ifdef SQUTIL_IMPLEMENTATION
 
 #include <stdarg.h>
-#include <sqstdio.h> 
-#include <sqstdaux.h> 
+#include <sqstdio.h>
+#include <sqstdaux.h>
 #include <stdio.h>
 
 SQUTIL_DEF SQRESULT register_global_variable( HSQUIRRELVM v, const char *name, SQInteger value ) {
@@ -144,7 +155,7 @@ static void print_bool( HSQUIRRELVM v, SQInteger top, SQInteger index ) {
 
 static void print_stack_value( HSQUIRRELVM v, SQObjectType type, SQInteger top, SQInteger index ) {
 	switch( type ) {
-		case OT_NULL: printf("[%lld,%lld] NULL\n", (index - top - 1), index); break; 
+		case OT_NULL: printf("[%lld,%lld] NULL\n", (index - top - 1), index); break;
 		case OT_INTEGER: print_integer( v, (index - top - 1), index ); break;
 		case OT_FLOAT: print_float( v, (index - top - 1), index ); break;
 		case OT_STRING: print_string( v, (index - top - 1), index ); break;
@@ -176,3 +187,24 @@ SQUTIL_DEF void print_stack(HSQUIRRELVM v) {
 
 #endif // end SQUTIL_IMPLEMENTATION
 
+/*
+  zlib license:
+
+  Copyright (c) 2017 Timothy Wright https://github.com/ZenToad
+
+  This software is provided 'as-is', without any express or implied
+  warranty. In no event will the authors be held liable for any damages
+  arising from the use of this software.
+
+  Permission is granted to anyone to use this software for any purpose,
+  including commercial applications, and to alter it and redistribute it
+  freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+*/

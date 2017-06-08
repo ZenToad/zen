@@ -1,5 +1,4 @@
 /* zen.h - v0.42 - public domain utility -https://github.com/ZenToad/zen
-                                     no warranty implied; use at your own risk
 
    Do this:
       #define ZEN_H_IMPLEMENTATION
@@ -11,7 +10,7 @@
    #define ZEN_H_IMPLEMENTATION
    #include "zen_lib/zen.h"
 
-	Full license at bottom of file.	
+	Full license at bottom of file.
 
 */
 
@@ -27,7 +26,7 @@ extern "C" {
 #if defined(ZEN_LIB_DEV)
 #include <stdio.h>
 #endif
-  
+
 
 #if !defined(int32_t)
 #include <stdint.h>
@@ -146,7 +145,7 @@ typedef intptr_t  psize;
 
 #ifdef ZEN_H_STATIC
 #define ZENHDEF static
-#else 
+#else
 #define ZENHDEF extern
 #endif
 
@@ -191,15 +190,15 @@ ZENHDEF unsigned long stb_randLCG_explicit(unsigned long seed);
 #endif // ZEN_H_INCLUDE
 
 
-//------------------------------------------ 
+//------------------------------------------
 //
 // Implementation
 //
-//------------------------------------------ 
+//------------------------------------------
 #ifdef ZEN_H_IMPLEMENTATION
 
 
-// The static array needs a 
+// The static array needs a
 // max, count, and cmp.  Do we really
 // need the cmp?  Could just pass in a func ptr... cmp(void *a, void *b);
 // Can we do the same tricks...
@@ -223,7 +222,7 @@ ZENHDEF unsigned long stb_randLCG_explicit(unsigned long seed);
 	GB_ASSERT(m > n);
 	a[((int *)(a) - 2)[0]++] = v;
 
-	
+
 	MakeStatic(arr, int, 64, int);
 	int *static = static_array(arr,int);
 
@@ -233,8 +232,8 @@ ZENHDEF unsigned long stb_randLCG_explicit(unsigned long seed);
 
 #endif
 
-#if 0 
-template <class K, class V> 
+#if 0
+template <class K, class V>
 class HashmapNode_t {
 	K key;
 	V value;
@@ -247,7 +246,7 @@ public:
 };
 
 
-template <class K, class V> 
+template <class K, class V>
 class Hashmap_t {
 
 	int num_buckets = 0;
@@ -413,7 +412,7 @@ void remove_index(StaticArray *arr, int i) {
 	if (i < arr->n - 1) // wasn't last
 		arr->a[i] = arr->a[arr->n-1];
 	arr->n--;
-}	
+}
 
 int find_index(StaticArray *arr, int v) {
 	for (int i = 0; i < arr->n; ++i) {
@@ -458,7 +457,7 @@ typedef struct Hashmap {
 
 typedef int (*Hashmap_traverse_cb) (HashmapNode * node);
 
-/** 
+/**
  * Simple Bob Jenkins's hash algorithm taken from the
  * wikipedia description.
  */
@@ -649,7 +648,7 @@ void gb_assert_handler(char const *condition, char const *file, int line, char c
 	fprintf(stderr, "\n");
 }
 
- 
+
 //////////////////////////////////////////////////////////////////////////////
 //
 //               Random Numbers via Meresenne Twister or LCG
@@ -772,7 +771,7 @@ unsigned long stb_rand()
    int idx = stb__mt_index;
    unsigned long s,r;
    int i;
-	
+
    if (idx >= STB__MT_LEN*sizeof(unsigned long)) {
       if (idx > STB__MT_LEN*sizeof(unsigned long))
          stb_srand(0);
@@ -786,19 +785,19 @@ unsigned long stb_rand()
          s = STB__TWIST(b, i, i+1);
          b[i] = b[i - STB__MT_IB] ^ (s >> 1) ^ STB__MAGIC(s);
       }
-      
+
       s = STB__TWIST(b, STB__MT_LEN-1, 0);
       b[STB__MT_LEN-1] = b[STB__MT_IA-1] ^ (s >> 1) ^ STB__MAGIC(s);
    }
    stb__mt_index = idx + sizeof(unsigned long);
-   
+
    r = *(unsigned long *)((unsigned char *)b + idx);
-   
+
    r ^= (r >> 11);
    r ^= (r << 7) & 0x9D2C5680;
    r ^= (r << 15) & 0xEFC60000;
    r ^= (r >> 18);
-   
+
    return r;
 }
 
@@ -812,19 +811,19 @@ double stb_frand(void)
 
 // Public Domain (www.unlicense.org)
 // This is free and unencumbered software released into the public domain.
-// Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
-// software, either in source code form or as a compiled binary, for any purpose, 
+// Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+// software, either in source code form or as a compiled binary, for any purpose,
 // commercial or non-commercial, and by any means.
-// In jurisdictions that recognize copyright laws, the author or authors of this 
-// software dedicate any and all copyright interest in the software to the public 
-// domain. We make this dedication for the benefit of the public at large and to 
-// the detriment of our heirs and successors. We intend this dedication to be an 
-// overt act of relinquishment in perpetuity of all present and future rights to 
+// In jurisdictions that recognize copyright laws, the author or authors of this
+// software dedicate any and all copyright interest in the software to the public
+// domain. We make this dedication for the benefit of the public at large and to
+// the detriment of our heirs and successors. We intend this dedication to be an
+// overt act of relinquishment in perpetuity of all present and future rights to
 // this software under copyright law.
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-// AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
-// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
