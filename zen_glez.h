@@ -74,7 +74,7 @@ ZGLEZDEF void zglez_fill_rect(float x0, float y0, float x1, float y1, Colorf_t c
 ZGLEZDEF void zglez_draw_polygon(Vector3_t *v, Colorf_t c, int count);
 ZGLEZDEF void zglez_fill_polygon(Vector3_t *v, Colorf_t c, int count, bool blend = true);
 ZGLEZDEF void zglez_texture_quad(const char *name, Vector3_t *v, Vector2_t *t);
-ZGLEZDEF void zglez_draw_text(const char *name, const char *string, Vector2_t position, Colorf_t color);
+ZGLEZDEF void zglez_draw_text(const char *name, const char *string, Vector3_t position, Colorf_t color);
 
 
 
