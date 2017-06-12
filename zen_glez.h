@@ -54,7 +54,7 @@ ZGLEZDEF void zglez_projection(Matrix4x4_t m);
 ZGLEZDEF void zglez_text_projection(Matrix4x4_t m);
 
 
-ZGLEZDEF int zglez_load_texture_from_file(const char *name, const char * path_to_file, int *w = 0, int *h = 0, int flip_vertically = 0);
+ZGLEZDEF int zglez_load_texture_from_file(const char *name, const char * path_to_file, bool pre_alpha = false, int *w = 0, int *h = 0, int flip_vertically = 0);
 ZGLEZDEF int zglez_load_texture_from_memory(const char *name, char *memory, isize size_in_bytes);
 ZGLEZDEF int zglez_unload_texture(const char *name);
 ZGLEZDEF void zglez_unload_all_textures();
@@ -925,9 +925,9 @@ ZGLEZDEF int zglez_load_texture_from_memory(const char *name, void const *memory
 
 	glGenSamplers(1, &texture->sampler);
 	glSamplerParameteri(texture->sampler, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glSamplerParameteri(texture->sampler, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glSamplerParameteri(texture->sampler, GL_TEXTURE_WRAP_S,     GL_REPEAT);
-	glSamplerParameteri(texture->sampler, GL_TEXTURE_WRAP_T,     GL_REPEAT);
+	glSamplerParameteri(texture->sampler, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glSamplerParameteri(texture->sampler, GL_TEXTURE_WRAP_S,     GL_CLAMP_TO_EDGE);
+	glSamplerParameteri(texture->sampler, GL_TEXTURE_WRAP_T,     GL_CLAMP_TO_EDGE);
 
 
 	GB_ASSERT(GL_MAX_TEXTURE_SIZE > width);
@@ -946,12 +946,26 @@ ZGLEZDEF int zglez_load_texture_from_memory(const char *name, void const *memory
 
 }
 
-ZGLEZDEF int zglez_load_texture_from_file(const char *name, const char * path_to_file, int *w, int *h, int flip_vertically) {
+ZGLEZDEF int zglez_load_texture_from_file(const char *name, const char * path_to_file, bool pre_alpha, int *w, int *h, int flip_vertically) {
 
 	int width, height, comp;
 	stbi_set_flip_vertically_on_load(flip_vertically);
 	uint8 *data = stbi_load(path_to_file, &width, &height, &comp, 4);
 	if (data) {
+		if (pre_alpha) {
+			for (int row = 0; row < height; ++row) {
+				for (int col = 0; col < width; ++col) {
+					int index = row * width + col;
+					float r = data[index * 4 + 0] / 255.0f;
+					float g = data[index * 4 + 1] / 255.0f;
+					float b = data[index * 4 + 2] / 255.0f;
+					float a = data[index * 4 + 3] / 255.0f;
+					data[index * 4 + 0] = (r * a) * 255.0f;
+					data[index * 4 + 1] = (g * a) * 255.0f;
+					data[index * 4 + 2] = (b * a) * 255.0f;
+				}
+			}
+		}
 		zglez_load_texture_from_memory(name, data, width, height, 4);
 		stbi_image_free(data);
 		if (w) *w = width;
