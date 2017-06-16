@@ -60,7 +60,7 @@ ZGLEZDEF int zglez_unload_texture(const char *name);
 ZGLEZDEF void zglez_unload_all_textures();
 
 
-ZGLEZDEF int zglez_load_font_from_memory(const char *name, unsigned char *memory, isize size_in_bytes, int pixel_size, int padding = 4, int oversample = 1);
+ZGLEZDEF int zglez_load_font_from_memory(const char *name, unsigned char *memory, int pixel_size, int padding = 4, int oversample = 1);
 ZGLEZDEF int zglez_unload_font(const char *name);
 ZGLEZDEF void zglez_unload_all_fonts();
 
@@ -1179,7 +1179,7 @@ static void zglez_destroy_fonts() {
 }
 
 
-ZGLEZDEF int zglez_load_font_from_memory(const char *name, unsigned char *memory, isize size_in_bytes,
+ZGLEZDEF int zglez_load_font_from_memory(const char *name, unsigned char *memory, 
 		int pixel_size, int padding, int oversample) {
 
 	zglez_font_map *map = g_zglez_fonts->map;
