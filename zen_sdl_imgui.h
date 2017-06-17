@@ -7,7 +7,7 @@
    #include ...
    #include ...
    #include ...
-   #define ZEN_IMGUI_IMPLEMENTATION
+   #define ZEN_SDL_IMGUI_IMPLEMENTATION
    #include "zen_sdl_imgui.h"
 
 	Full license at bottom of file.
@@ -28,10 +28,16 @@
 #endif
 
 ZSDLGUIDEF void zen_imgui_init(SDL_Zen *sdl);
+ZSDLGUIDEF void zen_imgui_set_default_callbacks(SDL_Zen *sdl);
 ZSDLGUIDEF void zen_imgui_begin(SDL_Zen *sdl);
 ZSDLGUIDEF void zen_imgui_end();
 ZSDLGUIDEF void zen_imgui_quit();
 
+
+ZSDLGUIDEF void sdl_imgui_mouse_button_callback(SDL_Zen * sdl, SDL_MouseButtonEvent *e);
+ZSDLGUIDEF void sdl_imgui_mouse_wheel_callback(SDL_Zen *sdl, SDL_MouseWheelEvent *e);
+ZSDLGUIDEF void sdl_imgui_keyboard_callback(SDL_Zen *sdl, SDL_KeyboardEvent *e);
+ZSDLGUIDEF void sdl_imgui_text_input_callback(SDL_Zen *sdl, SDL_TextInputEvent *e);
 
 #endif //_ZEN_SDL_IMGUI_H__
 
@@ -73,33 +79,17 @@ ZSDLGUIDEF void zen_imgui_begin(SDL_Zen *sdl) {
 	int h = sdl->window_height;
 	int display_w = sdl->window_width;
 	int display_h = sdl->window_height;
-	//int display_w = sdl->display_width;
-	//int display_h = sdl->display_height;
 
 	io.DisplaySize = ImVec2((float)w, (float)h);
 	io.DisplayFramebufferScale = ImVec2(w > 0 ? ((float)display_w / w) : 0, h > 0 ? ((float)display_h / h) : 0);
 
 	io.DeltaTime = sdl->delta_time;
 
-	// Setup inputs
-	// (we already got mouse wheel, keyboard keys & characters from glfw callbacks polled in glfwPollEvents())
-	// Mouse position in screen coordinates (set to -1,-1 if no mouse / on another screen, etc.)
 	if (SDL_GetWindowFlags(sdl->window) & SDL_WINDOW_MOUSE_FOCUS) {
 		io.MousePos = ImVec2(sdl->mouse_x, sdl->mouse_y);
 	} else {
 		io.MousePos = ImVec2(-1,-1);
 	}
-
-	for (int i = 0; i < 3; i++) {
-		io.MouseDown[i] = sdl->mouse_button[i] ? true : false;
-	}
-
-	io.MouseWheel = sdl->mouse_scroll;
-
-	for (int i = 0; i < sdl->SDL_ZEN_KEY_LAST; ++i) {
-		io.KeysDown[i] = sdl->keys[i] ? true : false;
-	}
-
 
 	// Hide OS mouse cursor if ImGui is drawing it
 	SDL_ShowCursor(io.MouseDrawCursor ? 0 : 1);
@@ -135,7 +125,7 @@ static void zen_imgui_create_font() {
 	// than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
 	__zen_imgui_default_font = io.Fonts->AddFontDefault();
 	//@TODO: this shouldn't be hard-coded here
-	__zen_imgui_custion_font = io.Fonts->AddFontFromFileTTF("res/PressStart2P/PressStart2P.ttf", 16);
+	//__zen_imgui_custion_font = io.Fonts->AddFontFromFileTTF("res/PressStart2P/PressStart2P.ttf", 16);
 
 	io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
@@ -365,6 +355,85 @@ ZSDLGUIDEF void zen_imgui_init(SDL_Zen *sdl) {
 
 	zen_imgui_setup_shaders();
 }
+
+
+ZSDLGUIDEF void sdl_imgui_text_input_callback(SDL_Zen *sdl, SDL_TextInputEvent *e) {
+
+	ImGuiIO& io = ImGui::GetIO();
+	if (io.WantTextInput) {
+		io.AddInputCharactersUTF8(e->text);
+	} 
+
+}
+
+
+ZSDLGUIDEF void sdl_imgui_keyboard_callback(SDL_Zen *sdl, SDL_KeyboardEvent *e) {
+
+	int key = e->keysym.sym & ~SDLK_SCANCODE_MASK;
+	ImGuiIO& io = ImGui::GetIO();
+	if (io.WantCaptureKeyboard) {
+		io.KeysDown[key] = (e->type == SDL_KEYDOWN);
+		io.KeyShift = ((SDL_GetModState() & KMOD_SHIFT) != 0);
+		io.KeyCtrl = ((SDL_GetModState() & KMOD_CTRL) != 0);
+		io.KeyAlt = ((SDL_GetModState() & KMOD_ALT) != 0);
+		io.KeySuper = ((SDL_GetModState() & KMOD_GUI) != 0);
+	} else {
+		io.KeysDown[key] = false;
+		io.KeyShift = false;
+		io.KeyCtrl = false;
+		io.KeyAlt = false;
+		io.KeySuper = false;
+		if (e->type == SDL_KEYDOWN) {
+			sdl->keys[e->keysym.scancode]++;
+		} else if (e->type == SDL_KEYUP) {
+			sdl->keys[e->keysym.scancode] = 0;
+		}
+	}
+
+}
+
+
+ZSDLGUIDEF void sdl_imgui_mouse_wheel_callback(SDL_Zen *sdl, SDL_MouseWheelEvent *e) {
+	ImGuiIO& io = ImGui::GetIO();
+	if (io.WantCaptureMouse) {
+		io.MouseWheel = e->y;	
+		sdl->mouse_scroll = 0;
+	} else {
+		io.MouseWheel = 0;
+		sdl->mouse_scroll += e->y;
+	}
+}
+
+
+ZSDLGUIDEF void sdl_imgui_mouse_button_callback(SDL_Zen * sdl, SDL_MouseButtonEvent *e) {
+
+	int button = (e->button - 1);
+	if (button < 3) {
+		ImGuiIO& io = ImGui::GetIO();
+		if (io.WantCaptureMouse) {
+			io.MouseDown[button] = e->type == SDL_MOUSEBUTTONDOWN ? true : false;
+		} else {
+			io.MouseDown[button] = false;
+			if (e->type == SDL_MOUSEBUTTONDOWN) {
+				sdl->mouse_button[button]++;
+			} else if (e->type == SDL_MOUSEBUTTONUP) {
+				sdl->mouse_button[button] = 0;
+			}
+		}
+	}
+
+}
+
+
+ZSDLGUIDEF void zen_imgui_set_default_callbacks(SDL_Zen *sdl) {
+
+	sdl->text_input_callback = sdl_imgui_text_input_callback;
+	sdl->keyboard_callback = sdl_imgui_keyboard_callback;
+	sdl->mouse_wheel_callback = sdl_imgui_mouse_wheel_callback;
+	sdl->mouse_button_callback = sdl_imgui_mouse_button_callback;
+
+}
+
 
 #endif //ZEN_IMGUI_IMPLEMENTATION
 

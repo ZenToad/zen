@@ -46,6 +46,10 @@ extern "C" {
 
 typedef struct SDL_Zen {
 
+	enum { 
+		SDL_ZEN_KEY_LAST = SDL_SCANCODE_APP2,
+		SDL_MOUSE_COUNT = 3
+	};
 	const char *window_title;
 
    int major_version;
@@ -78,14 +82,18 @@ typedef struct SDL_Zen {
 	float last_mouse_x;
 	float last_mouse_y;
 	float mouse_scroll;
-	int mouse_button[3];
+	int mouse_button[SDL_MOUSE_COUNT];
 
    SDL_Window* window;
 	enum { SDL_ZEN_KEY_LAST = SDL_SCANCODE_APP2 };
 	int keys[SDL_ZEN_KEY_LAST];
 
-	void (*window_size_callback)(SDL_Zen *sdl, int width, int height);
-	void (*text_input_callback)(SDL_Zen *sdl, char *text);
+	void (*window_event_callback)(SDL_Zen *sdl, SDL_WindowEvent *e);
+	void (*text_input_callback)(SDL_Zen *sdl, SDL_TextInputEvent *e);
+	void (*keyboard_callback)(SDL_Zen *sdl, SDL_KeyboardEvent *e);
+	void (*mouse_wheel_callback)(SDL_Zen *sdl, SDL_MouseWheelEvent *e);
+	void (*mouse_button_callback)(SDL_Zen *sdl, SDL_MouseButtonEvent *e);
+	void (*mouse_motion_callback)(SDL_Zen *sdl, SDL_MouseMotionEvent *e);
 
 } SDL_Zen;
 
@@ -120,10 +128,46 @@ void SDL_Zen_default_window_size_callback(SDL_Zen *sdl, int width, int height) {
 }
 
 
-void SDL_Zen_default_text_input_callback(SDL_Zen *sdl, char *text) {
-	// dummy
+void SDL_Zen_default_text_input_callback(SDL_Zen *sdl, SDL_TextInputEvent *e) {
+	// do nothing on default	
 }
 
+void SDL_Zen_default_keyboard_callback(SDL_Zen *sdl, SDL_KeyboardEvent *e) {
+
+	int key = e->keysym.scancode & ~SDLK_SCANCODE_MASK;
+	if (e->type == SDL_KEYDOWN) {
+		sdl->keys[key]++;
+	} else if (e->type == SDL_KEYUP) {
+		sdl->keys[key] = 0;
+	}
+
+}
+
+void SDL_Zen_default_mouse_wheel_callback(SDL_Zen *sdl, SDL_MouseWheelEvent *e) {
+	sdl->mouse_scroll += e->y;
+}
+
+void SDL_Zen_default_mouse_button_callback(SDL_Zen * sdl, SDL_MouseButtonEvent *e) {
+
+	int button = (e->button - 1);
+	if (button < 3) {
+		if (e->type == SDL_MOUSEBUTTONDOWN) {
+			sdl->mouse_button[button]++;
+		} else if (e->type == SDL_MOUSEBUTTONUP) {
+			sdl->mouse_button[button] = 0;
+		}
+	}
+
+}
+
+void SDL_Zen_default_mouse_motion_callback(SDL_Zen *sdl, SDL_MouseMotionEvent *e) {
+
+	sdl->mouse_x = e->x;
+	sdl->mouse_y = e->y;
+	sdl->mouse_dx = e->xrel;
+	sdl->mouse_dy = e->yrel;
+
+}
 
 static void sdl_die(const char * message) {
 	zout("%s: %s\n", message, SDL_GetError());
@@ -195,12 +239,30 @@ void SDL_Zen_Init(SDL_Zen *sdl) {
 
 	sdl->should_close = 0;
 
-	if (sdl->window_size_callback == NULL) {
-		sdl->window_size_callback = SDL_Zen_default_window_size_callback;
+
+	// callbacks
+	if (sdl->window_event_callback == NULL) {
+		sdl->window_event_callback = SDL_Zen_default_window_event_callback;
 	}
 
 	if (sdl->text_input_callback == NULL) {
 		sdl->text_input_callback = SDL_Zen_default_text_input_callback;
+	}
+
+	if (sdl->keyboard_callback == NULL) {
+		sdl->keyboard_callback = SDL_Zen_default_keyboard_callback;
+	}
+
+	if (sdl->mouse_wheel_callback == NULL) {
+		sdl->mouse_wheel_callback = SDL_Zen_default_mouse_wheel_callback;
+	}
+
+	if (sdl->mouse_button_callback == NULL) {
+		sdl->mouse_button_callback = SDL_Zen_default_mouse_button_callback;
+	}
+
+	if (sdl->mouse_motion_callback == NULL) {
+		sdl->mouse_motion_callback = SDL_Zen_default_mouse_motion_callback;
 	}
 
 	for (int i = 0; i < sdl->SDL_ZEN_KEY_LAST; ++i) {
@@ -238,26 +300,34 @@ ZSDL_DEF void SDL_Zen_Begin(SDL_Zen *sdl) {
 	sdl->total_frames++;
 
 
+	sdl->last_mouse_x = sdl->mouse_x;
+	sdl->last_mouse_y = sdl->mouse_y;
+
 	SDL_Event event;
 	while (SDL_PollEvent(&event)) {
 		switch(event.type) {
 			case SDL_QUIT: {
 				sdl->got_quit_message = 1;
 			} break;
+			case SDL_KEYDOWN:
+			case SDL_KEYUP: {
+				sdl->keyboard_callback(sdl, &event.key);
+			} break;
 			case SDL_TEXTINPUT: {
-			   sdl->text_input_callback(sdl, event.text.text);
+			   sdl->text_input_callback(sdl, &event.text);
 			} break;
 			case SDL_MOUSEWHEEL: {
-				sdl->mouse_scroll += event.wheel.y;
+				sdl->mouse_wheel_callback(sdl, &event.wheel);
+			} break;
+			case SDL_MOUSEBUTTONDOWN:
+			case SDL_MOUSEBUTTONUP: {
+				sdl->mouse_button_callback(sdl, &event.button);
+			} break;
+			case SDL_MOUSEMOTION: {
+				sdl->mouse_motion_callback(sdl, &event.motion);
 			} break;
 			case SDL_WINDOWEVENT: {
-				switch(event.window.event) {
-					case SDL_WINDOWEVENT_RESIZED:
-						sdl->window_width = event.window.data1;
-						sdl->window_height = event.window.data2;
-						sdl->window_size_callback(sdl, sdl->window_width, sdl->window_height);
-						break;
-				}
+				sdl->window_event_callback(sdl, &event.window);
 			} break;
 		}
 	}
@@ -312,8 +382,21 @@ ZSDL_DEF void SDL_Zen_Begin(SDL_Zen *sdl) {
 
 
 ZSDL_DEF void SDL_Zen_End(SDL_Zen *sdl) {
+
+	for (int i = 0; i < sdl->SDL_ZEN_KEY_LAST; ++i) {
+		if (sdl->keys[i]) {
+			sdl->keys[i]++;
+		} 
+	}
+
+	for (int i = 0; i < sdl->SDL_MOUSE_COUNT; ++i) {
+		if (sdl->mouse_button[i]) 
+			sdl->mouse_button[i]++;
+	}
+
 	sdl->mouse_scroll = 0;
 	SDL_GL_SwapWindow(sdl->window);
+
 }
 
 
