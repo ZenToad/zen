@@ -801,8 +801,16 @@ unsigned long stb_rand()
    return r;
 }
 
-double stb_frand(void)
-{
+
+int stb_rand_range(int min, int max) {
+	int a = zen_min(min, max);
+	int b = zen_max(min, max);
+	int diff = b - a + 1;
+	return a + stb_rand() % diff;
+}
+
+
+double stb_frand(void) {
    return stb_rand() / ((double) (1 << 16) * (1 << 16));
 }
 

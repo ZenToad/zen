@@ -300,7 +300,7 @@ ZSDL_DEF void SDL_Zen_Begin(SDL_Zen *sdl) {
 	}
 
 
-   glClear(GL_COLOR_BUFFER_BIT);
+   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
    int r = sdl->window_background & 0xFF;
    int g = (sdl->window_background >> 8) & 0xFF;
    int b = (sdl->window_background >> 16) & 0xFF;
