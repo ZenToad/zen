@@ -85,7 +85,6 @@ typedef struct SDL_Zen {
 	int mouse_button[SDL_MOUSE_COUNT];
 
    SDL_Window* window;
-	enum { SDL_ZEN_KEY_LAST = SDL_SCANCODE_APP2 };
 	int keys[SDL_ZEN_KEY_LAST];
 
 	void (*window_event_callback)(SDL_Zen *sdl, SDL_WindowEvent *e);
@@ -123,8 +122,9 @@ ZSDL_DEF void SDL_Zen_Destroy(SDL_Zen *sdl);
 #if defined(ZEN_SDL_IMPLEMENTATION)
 
 
-void SDL_Zen_default_window_size_callback(SDL_Zen *sdl, int width, int height) {
-	glViewport(0, 0, width, height);
+void SDL_Zen_default_window_event_callback(SDL_Zen *sdl, SDL_WindowEvent* e) {
+	//if ()
+	//glViewport(0, 0, e->data1, e->data2);
 }
 
 
@@ -134,7 +134,7 @@ void SDL_Zen_default_text_input_callback(SDL_Zen *sdl, SDL_TextInputEvent *e) {
 
 void SDL_Zen_default_keyboard_callback(SDL_Zen *sdl, SDL_KeyboardEvent *e) {
 
-	int key = e->keysym.scancode & ~SDLK_SCANCODE_MASK;
+	int key = e->keysym.scancode;
 	if (e->type == SDL_KEYDOWN) {
 		sdl->keys[key]++;
 	} else if (e->type == SDL_KEYUP) {
@@ -333,49 +333,12 @@ ZSDL_DEF void SDL_Zen_Begin(SDL_Zen *sdl) {
 	}
 
 
-	const unsigned char *state = SDL_GetKeyboardState(NULL);
-	for (int i = 0; i < sdl->SDL_ZEN_KEY_LAST; ++i) {
-		if (state[i]) {
-			sdl->keys[i]++;
-		} else {
-			sdl->keys[i] = 0;
-		}
-	}
-
-
-	int mouse_x, mouse_y;
-	uint32_t mouse_state = SDL_GetMouseState(&mouse_x, &mouse_y);
-	sdl->last_mouse_x = sdl->mouse_x;
-	sdl->last_mouse_y = sdl->mouse_y;
-	sdl->mouse_x = cast(float)mouse_x;
-	sdl->mouse_y = cast(float)mouse_y;
-	sdl->mouse_dx = sdl->mouse_x - sdl->last_mouse_x;
-	sdl->mouse_dy = sdl->mouse_y - sdl->last_mouse_y;
-
-
-	if (mouse_state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
-		sdl->mouse_button[0]++;
-	} else {
-		sdl->mouse_button[0] = 0;
-	}
-	if (mouse_state & SDL_BUTTON(SDL_BUTTON_MIDDLE)) {
-		sdl->mouse_button[1]++;
-	} else {
-		sdl->mouse_button[1] = 0;
-	}
-	if (mouse_state & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
-		sdl->mouse_button[2]++;
-	} else {
-		sdl->mouse_button[2] = 0;
-	}
-
-
-   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
    int r = sdl->window_background & 0xFF;
    int g = (sdl->window_background >> 8) & 0xFF;
    int b = (sdl->window_background >> 16) & 0xFF;
    int a = (sdl->window_background >> 24) & 0xFF;
    glClearColor(r / 255.99f, g / 255.99f, b / 255.99f, a / 255.99f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
 }
