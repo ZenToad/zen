@@ -47,34 +47,34 @@ extern "C" {
 #endif
 
 
-ZGLEZDEF void zglez_init();
-ZGLEZDEF void zglez_quit();
-ZGLEZDEF void zglez_flush();
-ZGLEZDEF void zglez_projection(Matrix4x4_t m);
-ZGLEZDEF void zglez_text_projection(Matrix4x4_t m);
+ZGLEZDEF void zen_glez_init();
+ZGLEZDEF void zen_glez_quit();
+ZGLEZDEF void zen_glez_flush();
+ZGLEZDEF void zen_glez_projection(Matrix4x4_t m);
+ZGLEZDEF void zen_glez_text_projection(Matrix4x4_t m);
 
 
-ZGLEZDEF int zglez_load_texture_from_file(const char *name, const char * path_to_file, bool pre_alpha = false, int *w = 0, int *h = 0, int flip_vertically = 0);
-ZGLEZDEF int zglez_load_texture_from_memory(const char *name, char *memory, isize size_in_bytes);
-ZGLEZDEF int zglez_unload_texture(const char *name);
-ZGLEZDEF void zglez_unload_all_textures();
+ZGLEZDEF int zen_glez_load_texture_from_file(const char *name, const char * path_to_file, bool pre_alpha = false, int *w = 0, int *h = 0, int flip_vertically = 0);
+ZGLEZDEF int zen_glez_load_texture_from_memory(const char *name, char *memory, isize size_in_bytes);
+ZGLEZDEF int zen_glez_unload_texture(const char *name);
+ZGLEZDEF void zen_glez_unload_all_textures();
 
 
-ZGLEZDEF int zglez_load_font_from_memory(const char *name, unsigned char *memory, int pixel_size, int padding = 4, int oversample = 1);
-ZGLEZDEF int zglez_unload_font(const char *name);
-ZGLEZDEF void zglez_unload_all_fonts();
+ZGLEZDEF int zen_glez_load_font_from_memory(const char *name, unsigned char *memory, int pixel_size, int padding = 4, int oversample = 1);
+ZGLEZDEF int zen_glez_unload_font(const char *name);
+ZGLEZDEF void zen_glez_unload_all_fonts();
 
 
-ZGLEZDEF void zglez_draw_point(Vector3_t v, Colorf_t c, float pt_size = 2.0f);
-ZGLEZDEF void zglez_draw_line(Vector3_t v0, Vector3_t v1, Colorf_t c);
-ZGLEZDEF void zglez_draw_circle(Vector3_t center, float radius, Colorf_t c, int steps = 32);
-ZGLEZDEF void zglez_fill_circle(Vector3_t center, float radius, Colorf_t c, int steps = 32, bool blend = true);
-ZGLEZDEF void zglez_draw_rect(float x0, float y0, float x1, float y1, Colorf_t color);
-ZGLEZDEF void zglez_fill_rect(float x0, float y0, float x1, float y1, Colorf_t color);
-ZGLEZDEF void zglez_draw_polygon(Vector3_t *v, Colorf_t c, int count);
-ZGLEZDEF void zglez_fill_polygon(Vector3_t *v, Colorf_t c, int count, bool blend = true);
-ZGLEZDEF void zglez_texture_quad(const char *name, Vector3_t *v, Vector2_t *t);
-ZGLEZDEF void zglez_draw_text(const char *name, const char *string, Vector3_t position, Colorf_t color);
+ZGLEZDEF void zen_glez_draw_point(Vector3_t v, Colorf_t c, float pt_size = 2.0f);
+ZGLEZDEF void zen_glez_draw_line(Vector3_t v0, Vector3_t v1, Colorf_t c);
+ZGLEZDEF void zen_glez_draw_circle(Vector3_t center, float radius, Colorf_t c, int steps = 32);
+ZGLEZDEF void zen_glez_fill_circle(Vector3_t center, float radius, Colorf_t c, int steps = 32, bool blend = true);
+ZGLEZDEF void zen_glez_draw_rect(float x0, float y0, float x1, float y1, Colorf_t color);
+ZGLEZDEF void zen_glez_fill_rect(float x0, float y0, float x1, float y1, Colorf_t color);
+ZGLEZDEF void zen_glez_draw_polygon(Vector3_t *v, Colorf_t c, int count);
+ZGLEZDEF void zen_glez_fill_polygon(Vector3_t *v, Colorf_t c, int count, bool blend = true);
+ZGLEZDEF void zen_glez_texture_quad(const char *name, Vector3_t *v, Vector2_t *t);
+ZGLEZDEF void zen_glez_draw_text(const char *name, const char *string, Vector3_t position, Colorf_t color);
 
 
 
@@ -269,7 +269,7 @@ typedef struct zglez_fonts {
 static zglez_fonts *g_zglez_fonts = 0;
 
 
-static void zglez_print_log(GLuint object) {
+static void zen_glez_print_log(GLuint object) {
 
 	GLint log_length = 0;
 	if (glIsShader(object)) {
@@ -294,7 +294,7 @@ static void zglez_print_log(GLuint object) {
 }
 
 
-static GLuint zglez_create_shader_from_string(const char* source, GLenum type ) {
+static GLuint zen_glez_create_shader_from_string(const char* source, GLenum type ) {
 
 	GLuint res = glCreateShader(type);
 	const char* sources[] = { source };
@@ -304,7 +304,7 @@ static GLuint zglez_create_shader_from_string(const char* source, GLenum type ) 
 	glGetShaderiv(res, GL_COMPILE_STATUS, &compile_ok);
 	if (compile_ok == GL_FALSE) {
 		fprintf(stderr, "Error compiling shader of type %d!\n", type);
-		zglez_print_log(res);
+		zen_glez_print_log(res);
 		glDeleteShader(res);
 		return 0;
 	}
@@ -314,10 +314,10 @@ static GLuint zglez_create_shader_from_string(const char* source, GLenum type ) 
 }
 
 
-static GLuint zglez_create_shader_program(const char* vs, const char* fs) {
+static GLuint zen_glez_create_shader_program(const char* vs, const char* fs) {
 
-	GLuint vsid = zglez_create_shader_from_string(vs, GL_VERTEX_SHADER);
-	GLuint fsid = zglez_create_shader_from_string(fs, GL_FRAGMENT_SHADER);
+	GLuint vsid = zen_glez_create_shader_from_string(vs, GL_VERTEX_SHADER);
+	GLuint fsid = zen_glez_create_shader_from_string(fs, GL_FRAGMENT_SHADER);
 	GB_ASSERT(vsid != 0 && fsid != 0);
 
 	GLuint program_id = glCreateProgram();
@@ -336,7 +336,7 @@ static GLuint zglez_create_shader_program(const char* vs, const char* fs) {
 }
 
 
-static void zgles_create_points() {
+static void zen_glez_create_points() {
 
 	g_zglez_points = ZEN_CALLOC(zglez_points, 1);
 	GB_ASSERT_NOT_NULL(g_zglez_points);
@@ -367,7 +367,7 @@ static void zgles_create_points() {
 
 	points->projection = Matrix4x4();
 
-	points->program_id = zglez_create_shader_program(vs, fs);
+	points->program_id = zen_glez_create_shader_program(vs, fs);
 	glUseProgram(points->program_id);
 	points->projection_uniform = glGetUniformLocation(points->program_id, "projectionMatrix");
 	points->vertex_attribute = 0;
@@ -408,7 +408,7 @@ static void zgles_create_points() {
 }
 
 
-static void zglez_flush_points() {
+static void zen_glez_flush_points() {
 
 	zglez_points *points = g_zglez_points;
 	if (points->count == 0)
@@ -443,11 +443,11 @@ static void zglez_flush_points() {
 }
 
 
-static void zglez_point_vertex(const Vector3_t v, const Colorf_t c, float size) {
+static void zen_glez_point_vertex(const Vector3_t v, const Colorf_t c, float size) {
 
 	zglez_points *points = g_zglez_points;
 	if (points->count == points->max_vertices)
-		zglez_flush_points();
+		zen_glez_flush_points();
 
 	points->vertices[points->count] = v;
 	points->colors[points->count] = c;
@@ -457,7 +457,7 @@ static void zglez_point_vertex(const Vector3_t v, const Colorf_t c, float size) 
 }
 
 
-static void zglez_destroy_points() {
+static void zen_glez_destroy_points() {
 
 	zglez_points *points = g_zglez_points;
 	if (points == NULL)
@@ -477,7 +477,7 @@ static void zglez_destroy_points() {
 }
 
 
-static void zglez_create_lines() {
+static void zen_glez_create_lines() {
 
 	g_zglez_lines = ZEN_CALLOC(zglez_lines, 1);
 	GB_ASSERT_NOT_NULL(g_zglez_lines);
@@ -506,7 +506,7 @@ static void zglez_create_lines() {
 
 	lines->projection = Matrix4x4();
 
-	lines->program_id = zglez_create_shader_program(vs, fs);
+	lines->program_id = zen_glez_create_shader_program(vs, fs);
 	glUseProgram(lines->program_id);
 	lines->projection_uniform = glGetUniformLocation(lines->program_id, "projectionMatrix");
 	lines->vertex_attribute = 0;
@@ -541,7 +541,7 @@ static void zglez_create_lines() {
 }
 
 
-static void zglez_flush_lines() {
+static void zen_glez_flush_lines() {
 
 	zglez_lines *lines = g_zglez_lines;
 	if (lines->count == 0)
@@ -572,11 +572,11 @@ static void zglez_flush_lines() {
 }
 
 
-static void zglez_line_vertex(const Vector3_t v, const Colorf_t c) {
+static void zen_glez_line_vertex(const Vector3_t v, const Colorf_t c) {
 
 	zglez_lines *lines = g_zglez_lines;
 	if (lines->count >= lines->max_vertices)
-		zglez_flush_lines();
+		zen_glez_flush_lines();
 
 	lines->vertices[lines->count] = v;
 	lines->colors[lines->count] = c;
@@ -585,7 +585,7 @@ static void zglez_line_vertex(const Vector3_t v, const Colorf_t c) {
 }
 
 
-static void zglez_destroy_lines() {
+static void zen_glez_destroy_lines() {
 
 	zglez_lines *lines = g_zglez_lines;
 	if (lines == NULL)
@@ -604,7 +604,7 @@ static void zglez_destroy_lines() {
 
 }
 
-static void zglez_create_triangles() {
+static void zen_glez_create_triangles() {
 
 	g_zglez_triangles = ZEN_CALLOC(zglez_triangles, 1);
 	GB_ASSERT_NOT_NULL(g_zglez_triangles);
@@ -633,7 +633,7 @@ static void zglez_create_triangles() {
 
 	triangles->projection = Matrix4x4();
 
-	triangles->program_id = zglez_create_shader_program(vs, fs);
+	triangles->program_id = zen_glez_create_shader_program(vs, fs);
 	glUseProgram(triangles->program_id);
 	triangles->projection_uniform = glGetUniformLocation(triangles->program_id, "projectionMatrix");
 	triangles->vertex_attribute = 0;
@@ -668,7 +668,7 @@ static void zglez_create_triangles() {
 }
 
 
-static void zglez_flush_triangles() {
+static void zen_glez_flush_triangles() {
 
 	zglez_triangles *triangles = g_zglez_triangles;
 	if (triangles->count == 0)
@@ -699,11 +699,11 @@ static void zglez_flush_triangles() {
 }
 
 
-static void zglez_triangle_vertex(const Vector3_t v, const Colorf_t c) {
+static void zen_glez_triangle_vertex(const Vector3_t v, const Colorf_t c) {
 
 	zglez_triangles *triangles = g_zglez_triangles;
 	if (triangles->count >= triangles->max_vertices)
-		zglez_flush_triangles();
+		zen_glez_flush_triangles();
 
 	triangles->vertices[triangles->count] = v;
 	triangles->colors[triangles->count] = c;
@@ -712,7 +712,7 @@ static void zglez_triangle_vertex(const Vector3_t v, const Colorf_t c) {
 }
 
 
-static void zglez_destroy_triangles() {
+static void zen_glez_destroy_triangles() {
 
 	zglez_triangles *triangles = g_zglez_triangles;
 	if (triangles == NULL)
@@ -732,7 +732,7 @@ static void zglez_destroy_triangles() {
 }
 
 
-ZGLEZDEF void zglez_create_textures() {
+ZGLEZDEF void zen_glez_create_textures() {
 
 	g_zglez_textures = ZEN_CALLOC(zglez_textures, 1);
 	GB_ASSERT_NOT_NULL(g_zglez_textures);
@@ -762,7 +762,7 @@ ZGLEZDEF void zglez_create_textures() {
 
 	tex->projection = Matrix4x4();
 
-	tex->program_id = zglez_create_shader_program(vs, fs);
+	tex->program_id = zen_glez_create_shader_program(vs, fs);
 	glUseProgram(tex->program_id);
 	tex->projection_uniform = glGetUniformLocation(tex->program_id, "projectionMatrix");
 	tex->sampler_location = glGetUniformLocation(tex->program_id, "u_tex");
@@ -798,7 +798,7 @@ ZGLEZDEF void zglez_create_textures() {
 }
 
 
-ZGLEZDEF void zglez_flush_textures() {
+ZGLEZDEF void zen_glez_flush_textures() {
 
 	zglez_textures *textures = g_zglez_textures;
 	if (textures->count == 0 || textures->current_texture == NULL)
@@ -839,11 +839,11 @@ ZGLEZDEF void zglez_flush_textures() {
 }
 
 
-static void zglez_texture_vertex(zglez_texture_t *texture, Vector3_t v, Vector2_t t) {
+static void zen_glez_texture_vertex(zglez_texture_t *texture, Vector3_t v, Vector2_t t) {
 
 	zglez_textures *textures = g_zglez_textures;
 	if (textures->count >= textures->max_vertices || textures->current_texture != texture)
-		zglez_flush_textures();
+		zen_glez_flush_textures();
 
 	textures->current_texture = texture;
 	textures->vertices[textures->count] = v;
@@ -854,7 +854,7 @@ static void zglez_texture_vertex(zglez_texture_t *texture, Vector3_t v, Vector2_
 }
 
 
-static void zglez_delete_texture(zglez_texture_t *texture) {
+static void zen_glez_delete_texture(zglez_texture_t *texture) {
 
 	glDeleteTextures(1, &texture->handle);
 	glDeleteSamplers(1, &texture->sampler);
@@ -862,7 +862,7 @@ static void zglez_delete_texture(zglez_texture_t *texture) {
 }
 
 
-static void zglez_destroy_textures() {
+static void zen_glez_destroy_textures() {
 
 	zglez_textures *textures = g_zglez_textures;
 	if (textures == NULL)
@@ -878,7 +878,7 @@ static void zglez_destroy_textures() {
 	zglez_texture_t *texture;
 	for (int i = 0; i < stb_arr_len(keys); ++i) {
 		if (zglez_texmap_remove(map, keys[i], &texture)) {
-			zglez_delete_texture(texture);
+			zen_glez_delete_texture(texture);
 			free(texture);
 		}
 	}
@@ -901,13 +901,13 @@ static void zglez_destroy_textures() {
 }
 
 
-ZGLEZDEF int zglez_load_texture_from_memory(const char *name, void const *memory, int32 width, int32 height, int32 channel_count) {
+ZGLEZDEF int zen_glez_load_texture_from_memory(const char *name, void const *memory, int32 width, int32 height, int32 channel_count) {
 
 
 	zglez_texture_map *map = g_zglez_textures->map;
 	zglez_texture_t *old_texture = zglez_texmap_get(map, name);
 	if (old_texture != NULL) {
-		zglez_unload_texture(name);
+		zen_glez_unload_texture(name);
 	}
 
 	zglez_texture_t *texture = ZEN_CALLOC(zglez_texture_t, 1);
@@ -946,7 +946,7 @@ ZGLEZDEF int zglez_load_texture_from_memory(const char *name, void const *memory
 
 }
 
-ZGLEZDEF int zglez_load_texture_from_file(const char *name, const char * path_to_file, bool pre_alpha, int *w, int *h, int flip_vertically) {
+ZGLEZDEF int zen_glez_load_texture_from_file(const char *name, const char * path_to_file, bool pre_alpha, int *w, int *h, int flip_vertically) {
 
 	int width, height, comp;
 	stbi_set_flip_vertically_on_load(flip_vertically);
@@ -966,7 +966,7 @@ ZGLEZDEF int zglez_load_texture_from_file(const char *name, const char * path_to
 				}
 			}
 		}
-		zglez_load_texture_from_memory(name, data, width, height, 4);
+		zen_glez_load_texture_from_memory(name, data, width, height, 4);
 		stbi_image_free(data);
 		if (w) *w = width;
 		if (h) *h = height;
@@ -978,18 +978,18 @@ ZGLEZDEF int zglez_load_texture_from_file(const char *name, const char * path_to
 }
 
 
-ZGLEZDEF int zglez_unload_texture(const char *name) {
+ZGLEZDEF int zen_glez_unload_texture(const char *name) {
 	zglez_texture_t *texture = NULL;
 	int result = zglez_texmap_remove(g_zglez_textures->map, name, &texture);
 	if (result) {
-		zglez_delete_texture(texture);
+		zen_glez_delete_texture(texture);
 		free(texture);
 	}
 	return result;
 }
 
 
-ZGLEZDEF void zglez_unload_all_textures() {
+ZGLEZDEF void zen_glez_unload_all_textures() {
 
 	const char ** keys = NULL;
 	zglez_texture_map *map = g_zglez_textures->map;
@@ -1001,7 +1001,7 @@ ZGLEZDEF void zglez_unload_all_textures() {
 	zglez_texture_t *texture = NULL;
 	for (int i = 0; i < stb_arr_len(keys); ++i) {
 		if (zglez_texmap_remove(map, keys[i], &texture)) {
-			zglez_delete_texture(texture);
+			zen_glez_delete_texture(texture);
 			free(texture);
 			texture = NULL;
 		}
@@ -1010,7 +1010,7 @@ ZGLEZDEF void zglez_unload_all_textures() {
 }
 
 
-ZGLEZDEF void zglez_create_fonts() {
+ZGLEZDEF void zen_glez_create_fonts() {
 
 	g_zglez_fonts = ZEN_CALLOC(zglez_fonts, 1);
 	GB_ASSERT_NOT_NULL(g_zglez_fonts);
@@ -1045,7 +1045,7 @@ ZGLEZDEF void zglez_create_fonts() {
 
 	fonts->projection = Matrix4x4();
 
-	fonts->program_id = zglez_create_shader_program(vs, fs);
+	fonts->program_id = zen_glez_create_shader_program(vs, fs);
 	glUseProgram(fonts->program_id);
 	fonts->projection_uniform = glGetUniformLocation(fonts->program_id, "proj_mat");
 	fonts->sampler_location = glGetUniformLocation(fonts->program_id, "u_tex");
@@ -1087,7 +1087,7 @@ ZGLEZDEF void zglez_create_fonts() {
 }
 
 
-ZGLEZDEF void zglez_flush_fonts() {
+ZGLEZDEF void zen_glez_flush_fonts() {
 
 	zglez_fonts *fonts = g_zglez_fonts;
 	if (fonts->count == 0 || fonts->current_font == NULL)
@@ -1132,7 +1132,7 @@ ZGLEZDEF void zglez_flush_fonts() {
 
 
 
-static void zglez_delete_font_texture(zglez_font_t *font) {
+static void zen_glez_delete_font_texture(zglez_font_t *font) {
 
 	glDeleteTextures(1, &font->handle);
 	glDeleteSamplers(1, &font->sampler);
@@ -1140,7 +1140,7 @@ static void zglez_delete_font_texture(zglez_font_t *font) {
 }
 
 
-static void zglez_destroy_fonts() {
+static void zen_glez_destroy_fonts() {
 
 	zglez_fonts *fonts = g_zglez_fonts;
 	if (fonts == NULL)
@@ -1156,7 +1156,7 @@ static void zglez_destroy_fonts() {
 	zglez_font_t *font;
 	for (int i = 0; i < stb_arr_len(keys); ++i) {
 		if (zglez_fontmap_remove(map, keys[i], &font)) {
-			zglez_delete_font_texture(font);
+			zen_glez_delete_font_texture(font);
 			free(font);
 		}
 	}
@@ -1179,13 +1179,13 @@ static void zglez_destroy_fonts() {
 }
 
 
-ZGLEZDEF int zglez_load_font_from_memory(const char *name, unsigned char *memory, 
+ZGLEZDEF int zen_glez_load_font_from_memory(const char *name, unsigned char *memory, 
 		int pixel_size, int padding, int oversample) {
 
 	zglez_font_map *map = g_zglez_fonts->map;
 	zglez_font_t *old_font = zglez_fontmap_get(map, name);
 	if (old_font != NULL) {
-		zglez_unload_font(name);
+		zen_glez_unload_font(name);
 	}
 
 
@@ -1252,19 +1252,19 @@ ZGLEZDEF int zglez_load_font_from_memory(const char *name, unsigned char *memory
 }
 
 
-ZGLEZDEF int zglez_unload_font(const char *name) {
+ZGLEZDEF int zen_glez_unload_font(const char *name) {
 	zglez_font_t *font = NULL;
 	int result = zglez_fontmap_remove(g_zglez_fonts->map, name, &font);
 	if (result) {
 		GB_ASSERT_NOT_NULL(font);
-		zglez_delete_font_texture(font);
+		zen_glez_delete_font_texture(font);
 		free(font);
 	}
 	return result;
 }
 
 
-ZGLEZDEF void zglez_unload_all_fonts() {
+ZGLEZDEF void zen_glez_unload_all_fonts() {
 
 	const char ** keys = NULL;
 	zglez_font_map *map = g_zglez_fonts->map;
@@ -1276,7 +1276,7 @@ ZGLEZDEF void zglez_unload_all_fonts() {
 	zglez_font_t *font = NULL;
 	for (int i = 0; i < stb_arr_len(keys); ++i) {
 		if (zglez_fontmap_remove(map, keys[i], &font)) {
-			zglez_delete_font_texture(font);
+			zen_glez_delete_font_texture(font);
 			free(font);
 			font = NULL;
 		}
@@ -1285,47 +1285,47 @@ ZGLEZDEF void zglez_unload_all_fonts() {
 }
 
 
-ZGLEZDEF void zglez_draw_point(Vector3_t v, Colorf_t c, float pt_size) {
-	zglez_point_vertex(v, c, pt_size);
+ZGLEZDEF void zen_glez_draw_point(Vector3_t v, Colorf_t c, float pt_size) {
+	zen_glez_point_vertex(v, c, pt_size);
 }
 
 
-ZGLEZDEF void zglez_draw_line(Vector3_t v0, Vector3_t v1, Colorf_t c) {
-	zglez_line_vertex(v0, c);
-	zglez_line_vertex(v1, c);
+ZGLEZDEF void zen_glez_draw_line(Vector3_t v0, Vector3_t v1, Colorf_t c) {
+	zen_glez_line_vertex(v0, c);
+	zen_glez_line_vertex(v1, c);
 }
 
 
-ZGLEZDEF void zglez_draw_polygon(Vector3_t *v, Colorf_t c, int count) {
+ZGLEZDEF void zen_glez_draw_polygon(Vector3_t *v, Colorf_t c, int count) {
 
 	Vector3_t V0 = v[count - 1];
 	for (int i = 0; i < count; ++i) {
 		Vector3_t V1 = v[i];
-		zglez_draw_line(V0, V1, c);
+		zen_glez_draw_line(V0, V1, c);
 		V0 = V1;
 	}
 
 }
 
 
-void zglez_fill_polygon(Vector3_t *v, Colorf_t c, int count, bool blend) {
+void zen_glez_fill_polygon(Vector3_t *v, Colorf_t c, int count, bool blend) {
 
 	Colorf_t color = blend ? c * 0.5f : c;
 	Vector3_t VM = v[0];
 	Vector3_t VA = v[count - 1];
 	for (int i = 0; i < count - 1; ++i) {
 		Vector3_t VB = v[i+1];
-		zglez_triangle_vertex(VM, color);
-		zglez_triangle_vertex(VA, color);
-		zglez_triangle_vertex(VB, color);
+		zen_glez_triangle_vertex(VM, color);
+		zen_glez_triangle_vertex(VA, color);
+		zen_glez_triangle_vertex(VB, color);
 		VA = VB;
 	}
 
 	Vector3_t V1 = v[count - 1];
 	for (int i = 1; i < count; ++i) {
 		Vector3_t V0 = v[i];
-		zglez_line_vertex(V0, c);
-		zglez_line_vertex(V1, c);
+		zen_glez_line_vertex(V0, c);
+		zen_glez_line_vertex(V1, c);
 		V1 = V0;
 	}
 
@@ -1333,7 +1333,7 @@ void zglez_fill_polygon(Vector3_t *v, Colorf_t c, int count, bool blend) {
 
 
 
-ZGLEZDEF void zglez_draw_circle(Vector3_t center, float radius, Colorf_t c, int steps) {
+ZGLEZDEF void zen_glez_draw_circle(Vector3_t center, float radius, Colorf_t c, int steps) {
 
 	float delta = 2.0f * M_PI / cast(float)steps;
 	float x = radius * cosf(0 * delta);
@@ -1343,14 +1343,14 @@ ZGLEZDEF void zglez_draw_circle(Vector3_t center, float radius, Colorf_t c, int 
 		x = radius * cosf(i * delta);
 		y = radius * sinf(i * delta);
 		Vector3_t V1 = Vector3(x, y, center.z);
-		zglez_draw_line(V0, V1, c);
+		zen_glez_draw_line(V0, V1, c);
 		V0 = V1;
 	}
 
 }
 
 
-void zglez_fill_circle(Vector3_t center, float radius, Colorf_t c, int steps, bool blend) {
+void zen_glez_fill_circle(Vector3_t center, float radius, Colorf_t c, int steps, bool blend) {
 
 	float delta = 2.0f * M_PI / cast(float)steps;
 
@@ -1362,9 +1362,9 @@ void zglez_fill_circle(Vector3_t center, float radius, Colorf_t c, int steps, bo
 		x = radius * cosf(i * delta);
 		y = radius * sinf(i * delta);
 		Vector3_t V1 = Vector3(x, y, center.z);
-		zglez_triangle_vertex(center, color);
-		zglez_triangle_vertex(V0, color);
-		zglez_triangle_vertex(V1, color);
+		zen_glez_triangle_vertex(center, color);
+		zen_glez_triangle_vertex(V0, color);
+		zen_glez_triangle_vertex(V1, color);
 		V0 = V1;
 	}
 
@@ -1376,65 +1376,65 @@ void zglez_fill_circle(Vector3_t center, float radius, Colorf_t c, int steps, bo
 		x = radius * cosf(i * delta);
 		y = radius * sinf(i * delta);
 		Vector3_t V1 = Vector3(x, y, center.z);
-		zglez_draw_line(V0, V1, c);
+		zen_glez_draw_line(V0, V1, c);
 		V0 = V1;
 	}
 
 }
 
 
-ZGLEZDEF void zglez_draw_rect(float x0, float y0, float x1, float y1, Colorf_t color) {
+ZGLEZDEF void zen_glez_draw_rect(float x0, float y0, float x1, float y1, Colorf_t color) {
 
-	zglez_line_vertex(Vector3(x0, y0, 0.0f), color);
-	zglez_line_vertex(Vector3(x0, y1, 0.0f), color);
+	zen_glez_line_vertex(Vector3(x0, y0, 0.0f), color);
+	zen_glez_line_vertex(Vector3(x0, y1, 0.0f), color);
 
-	zglez_line_vertex(Vector3(x0, y1, 0.0f), color);
-	zglez_line_vertex(Vector3(x1, y1, 0.0f), color);
+	zen_glez_line_vertex(Vector3(x0, y1, 0.0f), color);
+	zen_glez_line_vertex(Vector3(x1, y1, 0.0f), color);
 
-	zglez_line_vertex(Vector3(x1, y1, 0.0f), color);
-	zglez_line_vertex(Vector3(x1, y0, 0.0f), color);
+	zen_glez_line_vertex(Vector3(x1, y1, 0.0f), color);
+	zen_glez_line_vertex(Vector3(x1, y0, 0.0f), color);
 
-	zglez_line_vertex(Vector3(x1, y0, 0.0f), color);
-	zglez_line_vertex(Vector3(x0, y0, 0.0f), color);
-
-}
-
-
-ZGLEZDEF void zglez_fill_rect(float x0, float y0, float x1, float y1, float z, Colorf_t color) {
-
-	zglez_triangle_vertex(Vector3(x0, y1, z), color);
-	zglez_triangle_vertex(Vector3(x0, y0, z), color);
-	zglez_triangle_vertex(Vector3(x1, y1, z), color);
-
-	zglez_triangle_vertex(Vector3(x1, y1, z), color);
-	zglez_triangle_vertex(Vector3(x0, y0, z), color);
-	zglez_triangle_vertex(Vector3(x1, y0, z), color);
+	zen_glez_line_vertex(Vector3(x1, y0, 0.0f), color);
+	zen_glez_line_vertex(Vector3(x0, y0, 0.0f), color);
 
 }
 
 
-ZGLEZDEF void zglez_texture_quad(const char *name, Vector3_t *v, Vector2_t *t) {
+ZGLEZDEF void zen_glez_fill_rect(float x0, float y0, float x1, float y1, float z, Colorf_t color) {
+
+	zen_glez_triangle_vertex(Vector3(x0, y1, z), color);
+	zen_glez_triangle_vertex(Vector3(x0, y0, z), color);
+	zen_glez_triangle_vertex(Vector3(x1, y1, z), color);
+
+	zen_glez_triangle_vertex(Vector3(x1, y1, z), color);
+	zen_glez_triangle_vertex(Vector3(x0, y0, z), color);
+	zen_glez_triangle_vertex(Vector3(x1, y0, z), color);
+
+}
+
+
+ZGLEZDEF void zen_glez_texture_quad(const char *name, Vector3_t *v, Vector2_t *t) {
 
 	zglez_texture_map *map = g_zglez_textures->map;
 	zglez_texture_t *texture = zglez_texmap_get(map, name);
 	GB_ASSERT_MSG(texture != NULL, "Texture %s not found!", name);
 
-	zglez_texture_vertex(texture, v[0], t[0]);
-	zglez_texture_vertex(texture, v[1], t[1]);
-	zglez_texture_vertex(texture, v[3], t[3]);
+	zen_glez_texture_vertex(texture, v[0], t[0]);
+	zen_glez_texture_vertex(texture, v[1], t[1]);
+	zen_glez_texture_vertex(texture, v[3], t[3]);
 
-	zglez_texture_vertex(texture, v[3], t[3]);
-	zglez_texture_vertex(texture, v[1], t[1]);
-	zglez_texture_vertex(texture, v[2], t[2]);
+	zen_glez_texture_vertex(texture, v[3], t[3]);
+	zen_glez_texture_vertex(texture, v[1], t[1]);
+	zen_glez_texture_vertex(texture, v[2], t[2]);
 
 }
 
 
-static void zglez_font_vertex(zglez_font_t *font, float x, float y, float z, float s, float t, Colorf_t c) {
+static void zen_glez_font_vertex(zglez_font_t *font, float x, float y, float z, float s, float t, Colorf_t c) {
 
 	zglez_fonts *fonts = g_zglez_fonts;
 	if (fonts->count >= fonts->max_vertices || fonts->current_font  != font)
-		zglez_flush();
+		zen_glez_flush();
 
 	fonts->current_font = font;
 	fonts->vertices[fonts->count] = Vector3(x, y, z);
@@ -1446,7 +1446,7 @@ static void zglez_font_vertex(zglez_font_t *font, float x, float y, float z, flo
 }
 
 
-static int zglez_get_char_index(int ch) {
+static int zen_glez_get_char_index(int ch) {
 
 	// @TODO: is there a better way?
 	int ascii_start = ' ';
@@ -1466,7 +1466,7 @@ static int zglez_get_char_index(int ch) {
 }
 
 
-ZGLEZDEF void zglez_draw_text(const char *name, const char *string, Vector3_t position, Colorf_t color) {
+ZGLEZDEF void zen_glez_draw_text(const char *name, const char *string, Vector3_t position, Colorf_t color) {
 
 	zglez_fonts * fonts = g_zglez_fonts;
 	zglez_font_t *font = zglez_fontmap_get(fonts->map, name);
@@ -1479,16 +1479,16 @@ ZGLEZDEF void zglez_draw_text(const char *name, const char *string, Vector3_t po
 	float zpos = position.z;
 
 	while (string[ch]) {
-		int char_index = zglez_get_char_index(string[ch]);
+		int char_index = zen_glez_get_char_index(string[ch]);
 		stbtt_GetPackedQuad(font->pdata, font->width, font->height, char_index, &xpos, &ypos, &q, 0);
 
-		zglez_font_vertex(font, q.x0, q.y0, zpos, q.s0, q.t0, color);
-		zglez_font_vertex(font, q.x0, q.y1, zpos, q.s0, q.t1, color);
-		zglez_font_vertex(font, q.x1, q.y0, zpos, q.s1, q.t0, color);
+		zen_glez_font_vertex(font, q.x0, q.y0, zpos, q.s0, q.t0, color);
+		zen_glez_font_vertex(font, q.x0, q.y1, zpos, q.s0, q.t1, color);
+		zen_glez_font_vertex(font, q.x1, q.y0, zpos, q.s1, q.t0, color);
 
-		zglez_font_vertex(font, q.x1, q.y0, zpos, q.s1, q.t0, color);
-		zglez_font_vertex(font, q.x0, q.y1, zpos, q.s0, q.t1, color);
-		zglez_font_vertex(font, q.x1, q.y1, zpos, q.s1, q.t1, color);
+		zen_glez_font_vertex(font, q.x1, q.y0, zpos, q.s1, q.t0, color);
+		zen_glez_font_vertex(font, q.x0, q.y1, zpos, q.s0, q.t1, color);
+		zen_glez_font_vertex(font, q.x1, q.y1, zpos, q.s1, q.t1, color);
 		ch++;
 
 	}
@@ -1496,18 +1496,18 @@ ZGLEZDEF void zglez_draw_text(const char *name, const char *string, Vector3_t po
 }
 
 
-ZGLEZDEF void zglez_init() {
+ZGLEZDEF void zen_glez_init() {
 
-	zgles_create_points();
-	zglez_create_lines();
-	zglez_create_triangles();
-	zglez_create_textures();
-	zglez_create_fonts();
+	zen_glez_create_points();
+	zen_glez_create_lines();
+	zen_glez_create_triangles();
+	zen_glez_create_textures();
+	zen_glez_create_fonts();
 
 }
 
 
-ZGLEZDEF void zglez_projection(Matrix4x4_t mat) {
+ZGLEZDEF void zen_glez_projection(Matrix4x4_t mat) {
 
 	g_zglez_lines->projection = mat;
 	g_zglez_points->projection = mat;
@@ -1517,29 +1517,29 @@ ZGLEZDEF void zglez_projection(Matrix4x4_t mat) {
 }
 
 
-ZGLEZDEF void zglez_text_projection(Matrix4x4_t mat) {
+ZGLEZDEF void zen_glez_text_projection(Matrix4x4_t mat) {
 	g_zglez_fonts->projection = mat;
 }
 
 
-ZGLEZDEF void zglez_flush() {
+ZGLEZDEF void zen_glez_flush() {
 
-	zglez_flush_textures();
-	zglez_flush_triangles();
-	zglez_flush_lines();
-	zglez_flush_points();
-	zglez_flush_fonts();
+	zen_glez_flush_textures();
+	zen_glez_flush_triangles();
+	zen_glez_flush_lines();
+	zen_glez_flush_points();
+	zen_glez_flush_fonts();
 
 }
 
 
-ZGLEZDEF void zglez_quit() {
+ZGLEZDEF void zen_glez_quit() {
 
-	zglez_destroy_points();
-	zglez_destroy_lines();
-	zglez_destroy_triangles();
-	zglez_destroy_textures();
-	zglez_destroy_fonts();
+	zen_glez_destroy_points();
+	zen_glez_destroy_lines();
+	zen_glez_destroy_triangles();
+	zen_glez_destroy_textures();
+	zen_glez_destroy_fonts();
 
 }
 
