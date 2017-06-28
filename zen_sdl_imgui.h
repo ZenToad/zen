@@ -27,17 +27,17 @@
 #include "zen_sdl.h"
 #endif
 
-ZSDLGUIDEF void zen_imgui_init(SDL_Zen *sdl);
-ZSDLGUIDEF void zen_imgui_set_default_callbacks(SDL_Zen *sdl);
-ZSDLGUIDEF void zen_imgui_begin(SDL_Zen *sdl);
+ZSDLGUIDEF void zen_imgui_init(zen_sdl *sdl);
+ZSDLGUIDEF void zen_imgui_set_default_callbacks(zen_sdl *sdl);
+ZSDLGUIDEF void zen_imgui_begin(zen_sdl *sdl);
 ZSDLGUIDEF void zen_imgui_end();
 ZSDLGUIDEF void zen_imgui_quit();
 
 
-ZSDLGUIDEF void sdl_imgui_mouse_button_callback(SDL_Zen * sdl, SDL_MouseButtonEvent *e);
-ZSDLGUIDEF void sdl_imgui_mouse_wheel_callback(SDL_Zen *sdl, SDL_MouseWheelEvent *e);
-ZSDLGUIDEF void sdl_imgui_keyboard_callback(SDL_Zen *sdl, SDL_KeyboardEvent *e);
-ZSDLGUIDEF void sdl_imgui_text_input_callback(SDL_Zen *sdl, SDL_TextInputEvent *e);
+ZSDLGUIDEF void sdl_imgui_mouse_button_callback(zen_sdl * sdl, SDL_MouseButtonEvent *e);
+ZSDLGUIDEF void sdl_imgui_mouse_wheel_callback(zen_sdl *sdl, SDL_MouseWheelEvent *e);
+ZSDLGUIDEF void sdl_imgui_keyboard_callback(zen_sdl *sdl, SDL_KeyboardEvent *e);
+ZSDLGUIDEF void sdl_imgui_text_input_callback(zen_sdl *sdl, SDL_TextInputEvent *e);
 
 #endif //_ZEN_SDL_IMGUI_H__
 
@@ -70,7 +70,7 @@ static ImFont* __zen_imgui_default_font;
 static ImFont* __zen_imgui_custion_font;
 
 
-ZSDLGUIDEF void zen_imgui_begin(SDL_Zen *sdl) {
+ZSDLGUIDEF void zen_imgui_begin(zen_sdl *sdl) {
 
 	ImGuiIO& io = ImGui::GetIO();
 
@@ -318,7 +318,7 @@ static void zen_imgui_setup_shaders() {
 
 }
 
-ZSDLGUIDEF void zen_imgui_init(SDL_Zen *sdl) {
+ZSDLGUIDEF void zen_imgui_init(zen_sdl *sdl) {
 
 	ImGuiIO& io = ImGui::GetIO();
 	io.KeyMap[ImGuiKey_Tab] = SDLK_TAB;                     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
@@ -357,7 +357,7 @@ ZSDLGUIDEF void zen_imgui_init(SDL_Zen *sdl) {
 }
 
 
-ZSDLGUIDEF void sdl_imgui_text_input_callback(SDL_Zen *sdl, SDL_TextInputEvent *e) {
+ZSDLGUIDEF void sdl_imgui_text_input_callback(zen_sdl *sdl, SDL_TextInputEvent *e) {
 
 	ImGuiIO& io = ImGui::GetIO();
 	if (io.WantTextInput) {
@@ -367,7 +367,7 @@ ZSDLGUIDEF void sdl_imgui_text_input_callback(SDL_Zen *sdl, SDL_TextInputEvent *
 }
 
 
-ZSDLGUIDEF void sdl_imgui_keyboard_callback(SDL_Zen *sdl, SDL_KeyboardEvent *e) {
+ZSDLGUIDEF void sdl_imgui_keyboard_callback(zen_sdl *sdl, SDL_KeyboardEvent *e) {
 
 	int key = e->keysym.sym & ~SDLK_SCANCODE_MASK;
 	ImGuiIO& io = ImGui::GetIO();
@@ -393,7 +393,7 @@ ZSDLGUIDEF void sdl_imgui_keyboard_callback(SDL_Zen *sdl, SDL_KeyboardEvent *e) 
 }
 
 
-ZSDLGUIDEF void sdl_imgui_mouse_wheel_callback(SDL_Zen *sdl, SDL_MouseWheelEvent *e) {
+ZSDLGUIDEF void sdl_imgui_mouse_wheel_callback(zen_sdl *sdl, SDL_MouseWheelEvent *e) {
 	ImGuiIO& io = ImGui::GetIO();
 	if (io.WantCaptureMouse) {
 		io.MouseWheel = e->y;	
@@ -405,7 +405,7 @@ ZSDLGUIDEF void sdl_imgui_mouse_wheel_callback(SDL_Zen *sdl, SDL_MouseWheelEvent
 }
 
 
-ZSDLGUIDEF void sdl_imgui_mouse_button_callback(SDL_Zen * sdl, SDL_MouseButtonEvent *e) {
+ZSDLGUIDEF void sdl_imgui_mouse_button_callback(zen_sdl * sdl, SDL_MouseButtonEvent *e) {
 
 	int button = (e->button - 1);
 	if (button < 3) {
@@ -425,7 +425,7 @@ ZSDLGUIDEF void sdl_imgui_mouse_button_callback(SDL_Zen * sdl, SDL_MouseButtonEv
 }
 
 
-ZSDLGUIDEF void zen_imgui_set_default_callbacks(SDL_Zen *sdl) {
+ZSDLGUIDEF void zen_imgui_set_default_callbacks(zen_sdl *sdl) {
 
 	sdl->text_input_callback = sdl_imgui_text_input_callback;
 	sdl->keyboard_callback = sdl_imgui_keyboard_callback;

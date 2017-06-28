@@ -44,10 +44,10 @@ extern "C" {
 #define MOUSE_DOWN(SDL,B) SDL->mouse_button[(SDL_BUTTON_##B)-1]
 #define MOUSE_DOWN_ONCE(SDL,B) SDL->mouse_button[(SDL_BUTTON_##B)-1] == 1
 
-typedef struct SDL_Zen {
+typedef struct zen_sdl {
 
 	enum { 
-		SDL_ZEN_KEY_LAST = SDL_SCANCODE_APP2,
+		ZEN_SDL_KEY_LAST = SDL_SCANCODE_APP2,
 		SDL_MOUSE_COUNT = 3
 	};
 	const char *window_title;
@@ -85,26 +85,28 @@ typedef struct SDL_Zen {
 	int mouse_button[SDL_MOUSE_COUNT];
 
    SDL_Window* window;
-	int keys[SDL_ZEN_KEY_LAST];
+	int keys[ZEN_SDL_KEY_LAST];
 
-	void (*window_event_callback)(SDL_Zen *sdl, SDL_WindowEvent *e);
-	void (*text_input_callback)(SDL_Zen *sdl, SDL_TextInputEvent *e);
-	void (*keyboard_callback)(SDL_Zen *sdl, SDL_KeyboardEvent *e);
-	void (*mouse_wheel_callback)(SDL_Zen *sdl, SDL_MouseWheelEvent *e);
-	void (*mouse_button_callback)(SDL_Zen *sdl, SDL_MouseButtonEvent *e);
-	void (*mouse_motion_callback)(SDL_Zen *sdl, SDL_MouseMotionEvent *e);
+	void (*window_event_callback)(zen_sdl *sdl, SDL_WindowEvent *e);
+	void (*text_input_callback)(zen_sdl *sdl, SDL_TextInputEvent *e);
+	void (*keyboard_callback)(zen_sdl *sdl, SDL_KeyboardEvent *e);
+	void (*mouse_wheel_callback)(zen_sdl *sdl, SDL_MouseWheelEvent *e);
+	void (*mouse_button_callback)(zen_sdl *sdl, SDL_MouseButtonEvent *e);
+	void (*mouse_motion_callback)(zen_sdl *sdl, SDL_MouseMotionEvent *e);
 
-} SDL_Zen;
+} zen_sdl;
 
 
-ZSDL_DEF SDL_Zen *SDL_Zen_Create(const char *title, int width, int height, int major = 4, int minor = 5);
-ZSDL_DEF void SDL_Zen_Init(SDL_Zen *sdl);
-ZSDL_DEF void SDL_Zen_ShowWindow(SDL_Zen *sdl);
-ZSDL_DEF int SDL_Zen_IsRunning(SDL_Zen *sdl);
-ZSDL_DEF void SDL_Zen_Begin(SDL_Zen *sdl);
-ZSDL_DEF void SDL_Zen_End(SDL_Zen *sdl);
-ZSDL_DEF void SDL_Zen_Quit(SDL_Zen *sdl);
-ZSDL_DEF void SDL_Zen_Destroy(SDL_Zen *sdl);
+ZSDL_DEF zen_sdl *zen_sdl_create(const char *title, int width, int height, int major = 4, int minor = 5);
+ZSDL_DEF void zen_sdl_init(zen_sdl *sdl);
+ZSDL_DEF void zen_sdl_show_window(zen_sdl *sdl);
+ZSDL_DEF int zen_sdl_is_running(zen_sdl *sdl);
+ZSDL_DEF void zen_sdl_begin(zen_sdl *sdl);
+ZSDL_DEF void zen_sdl_end(zen_sdl *sdl);
+ZSDL_DEF void zen_sdl_quit(zen_sdl *sdl);
+ZSDL_DEF void zen_sdl_destroy(zen_sdl *sdl);
+
+ZSDL_DEF uint8 *zen_sdl_load_file(const char *path, isize *size = NULL);
 
 
 #if defined(__cplusplus)
@@ -122,17 +124,17 @@ ZSDL_DEF void SDL_Zen_Destroy(SDL_Zen *sdl);
 #if defined(ZEN_SDL_IMPLEMENTATION)
 
 
-void SDL_Zen_default_window_event_callback(SDL_Zen *sdl, SDL_WindowEvent* e) {
+void zen_sdl_default_window_event_callback(zen_sdl *sdl, SDL_WindowEvent* e) {
 	//if ()
 	//glViewport(0, 0, e->data1, e->data2);
 }
 
 
-void SDL_Zen_default_text_input_callback(SDL_Zen *sdl, SDL_TextInputEvent *e) {
+void zen_sdl_default_text_input_callback(zen_sdl *sdl, SDL_TextInputEvent *e) {
 	// do nothing on default	
 }
 
-void SDL_Zen_default_keyboard_callback(SDL_Zen *sdl, SDL_KeyboardEvent *e) {
+void zen_sdl_default_keyboard_callback(zen_sdl *sdl, SDL_KeyboardEvent *e) {
 
 	int key = e->keysym.scancode;
 	if (e->type == SDL_KEYDOWN) {
@@ -143,11 +145,11 @@ void SDL_Zen_default_keyboard_callback(SDL_Zen *sdl, SDL_KeyboardEvent *e) {
 
 }
 
-void SDL_Zen_default_mouse_wheel_callback(SDL_Zen *sdl, SDL_MouseWheelEvent *e) {
+void zen_sdl_default_mouse_wheel_callback(zen_sdl *sdl, SDL_MouseWheelEvent *e) {
 	sdl->mouse_scroll += e->y;
 }
 
-void SDL_Zen_default_mouse_button_callback(SDL_Zen * sdl, SDL_MouseButtonEvent *e) {
+void zen_sdl_default_mouse_button_callback(zen_sdl * sdl, SDL_MouseButtonEvent *e) {
 
 	int button = (e->button - 1);
 	if (button < 3) {
@@ -160,7 +162,7 @@ void SDL_Zen_default_mouse_button_callback(SDL_Zen * sdl, SDL_MouseButtonEvent *
 
 }
 
-void SDL_Zen_default_mouse_motion_callback(SDL_Zen *sdl, SDL_MouseMotionEvent *e) {
+void zen_sdl_default_mouse_motion_callback(zen_sdl *sdl, SDL_MouseMotionEvent *e) {
 
 	sdl->mouse_x = e->x;
 	sdl->mouse_y = e->y;
@@ -169,15 +171,15 @@ void SDL_Zen_default_mouse_motion_callback(SDL_Zen *sdl, SDL_MouseMotionEvent *e
 
 }
 
-static void sdl_die(const char * message) {
+static void zen_sdl_die(const char * message) {
 	zout("%s: %s\n", message, SDL_GetError());
 	exit(2);
 }
 
 
-ZSDL_DEF SDL_Zen *SDL_Zen_Create(const char *title, int width, int height, int major, int minor) {
+ZSDL_DEF zen_sdl *zen_sdl_create(const char *title, int width, int height, int major, int minor) {
 
-	SDL_Zen *sdl = ZEN_CALLOC(SDL_Zen, 1);
+	zen_sdl *sdl = ZEN_CALLOC(zen_sdl, 1);
 	GB_ASSERT_NOT_NULL(sdl);
 
 	sdl->window_title = title;
@@ -191,16 +193,16 @@ ZSDL_DEF SDL_Zen *SDL_Zen_Create(const char *title, int width, int height, int m
 }
 
 
-ZSDL_DEF void SDL_Zen_Destroy(SDL_Zen *sdl) {
+ZSDL_DEF void zen_sdl_destroy(zen_sdl *sdl) {
 	free(sdl);
 }
 
 
-void SDL_Zen_Init(SDL_Zen *sdl) {
+void zen_sdl_init(zen_sdl *sdl) {
 
 	// Initialize SDL
 	if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
-		sdl_die("Couldn't initialize SDL");
+		zen_sdl_die("Couldn't initialize SDL");
 
 	atexit (SDL_Quit);
 	SDL_GL_LoadLibrary(NULL); // Default OpenGL is fine.
@@ -218,11 +220,11 @@ void SDL_Zen_Init(SDL_Zen *sdl) {
 		sdl->window_width, sdl->window_height, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN | SDL_WINDOW_OPENGL
 	);
 	if (sdl->window == NULL)
-		sdl_die("Couldn't set video mode");
+		zen_sdl_die("Couldn't set video mode");
 
 	SDL_GLContext maincontext = SDL_GL_CreateContext(sdl->window);
 	if (maincontext == NULL)
-		sdl_die("Failed to create OpenGL context");
+		zen_sdl_die("Failed to create OpenGL context");
 
 	// Check OpenGL properties
 	printf("OpenGL loaded\n");
@@ -242,30 +244,30 @@ void SDL_Zen_Init(SDL_Zen *sdl) {
 
 	// callbacks
 	if (sdl->window_event_callback == NULL) {
-		sdl->window_event_callback = SDL_Zen_default_window_event_callback;
+		sdl->window_event_callback = zen_sdl_default_window_event_callback;
 	}
 
 	if (sdl->text_input_callback == NULL) {
-		sdl->text_input_callback = SDL_Zen_default_text_input_callback;
+		sdl->text_input_callback = zen_sdl_default_text_input_callback;
 	}
 
 	if (sdl->keyboard_callback == NULL) {
-		sdl->keyboard_callback = SDL_Zen_default_keyboard_callback;
+		sdl->keyboard_callback = zen_sdl_default_keyboard_callback;
 	}
 
 	if (sdl->mouse_wheel_callback == NULL) {
-		sdl->mouse_wheel_callback = SDL_Zen_default_mouse_wheel_callback;
+		sdl->mouse_wheel_callback = zen_sdl_default_mouse_wheel_callback;
 	}
 
 	if (sdl->mouse_button_callback == NULL) {
-		sdl->mouse_button_callback = SDL_Zen_default_mouse_button_callback;
+		sdl->mouse_button_callback = zen_sdl_default_mouse_button_callback;
 	}
 
 	if (sdl->mouse_motion_callback == NULL) {
-		sdl->mouse_motion_callback = SDL_Zen_default_mouse_motion_callback;
+		sdl->mouse_motion_callback = zen_sdl_default_mouse_motion_callback;
 	}
 
-	for (int i = 0; i < sdl->SDL_ZEN_KEY_LAST; ++i) {
+	for (int i = 0; i < sdl->ZEN_SDL_KEY_LAST; ++i) {
 		sdl->keys[i] = 0;
 	}
 
@@ -280,17 +282,17 @@ void SDL_Zen_Init(SDL_Zen *sdl) {
 }
 
 
-ZSDL_DEF void SDL_Zen_ShowWindow(SDL_Zen *sdl) {
+ZSDL_DEF void zen_sdl_show_window(zen_sdl *sdl) {
 	SDL_ShowWindow(sdl->window);
 }
 
 
-ZSDL_DEF int SDL_Zen_IsRunning(SDL_Zen *sdl) {
+ZSDL_DEF int zen_sdl_is_running(zen_sdl *sdl) {
 	return !(sdl->should_close || sdl->got_quit_message);
 }
 
 
-ZSDL_DEF void SDL_Zen_Begin(SDL_Zen *sdl) {
+ZSDL_DEF void zen_sdl_begin(zen_sdl *sdl) {
 
 	// do time here
 	sdl->last_time = sdl->current_time;
@@ -344,9 +346,9 @@ ZSDL_DEF void SDL_Zen_Begin(SDL_Zen *sdl) {
 }
 
 
-ZSDL_DEF void SDL_Zen_End(SDL_Zen *sdl) {
+ZSDL_DEF void zen_sdl_end(zen_sdl *sdl) {
 
-	for (int i = 0; i < sdl->SDL_ZEN_KEY_LAST; ++i) {
+	for (int i = 0; i < sdl->ZEN_SDL_KEY_LAST; ++i) {
 		if (sdl->keys[i]) {
 			sdl->keys[i]++;
 		} 
@@ -363,12 +365,46 @@ ZSDL_DEF void SDL_Zen_End(SDL_Zen *sdl) {
 }
 
 
-ZSDL_DEF void SDL_Zen_Quit(SDL_Zen *sdl) {
+ZSDL_DEF void zen_sdl_quit(zen_sdl *sdl) {
 	int ms = (int)(1.0e3 * sdl->total_time / sdl->total_frames);
 	zout("\n%d (ms)\n", ms);
 	SDL_Quit();
 }
 
+
+ZSDL_DEF uint8 *zen_sdl_load_file(const char *path, isize *size) {
+
+	SDL_RWops *rw = SDL_RWFromFile(path, "rb");
+	if (rw == NULL) {
+		zout("%s: %s", path, SDL_GetError());
+		return NULL;
+	}
+
+	int64 res_size = SDL_RWsize(rw);
+	uint8 *mem = ZEN_CALLOC(uint8, res_size + 1);
+	GB_ASSERT_NOT_NULL(mem);
+
+	int64 nb_read_total = 0;
+	int64 nb_read = 1;
+	uint8 *buf = mem;
+
+	while (nb_read_total < res_size && nb_read != 0) {
+		nb_read = SDL_RWread(rw, buf, 1, (res_size - nb_read_total));
+		nb_read_total += nb_read;
+		buf += nb_read;
+	}
+
+	SDL_RWclose(rw);
+	if (nb_read_total != res_size) {
+		free(mem);
+		return NULL;
+	}
+
+	mem[nb_read_total] = '\0';
+	if (size) *size = res_size;
+	return mem;
+
+}
 
 #endif
 /*
