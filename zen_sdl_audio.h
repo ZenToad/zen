@@ -155,13 +155,12 @@ typedef struct ZenAudioSystem {
 
 static void zen_audio_reset_channel(zen_channel *channel) {
 
+	memset(channel, 0, zen_sizeof(zen_channel));
+
 	channel->fade_type = NOT_FADING;
 	channel->right_pan = 1.0f;
 	channel->left_pan = 1.0f;
 	channel->gain = 1.0f;
-	channel->expire = 0;
-	channel->loop_count = 0;
-	channel->is_playing = 0;
 	channel->advance = 1.0f;
 
 }
@@ -403,15 +402,13 @@ static void zen_audio_add_channel(ZenAudioSystem *audio, int channel_id, zen_sou
 		zen_channel *channel = &audio->channels[i];
 		if (!channel->is_playing) {
 			SDL_LockAudioDevice(audio->id);
-
+			
 			zen_audio_reset_channel(channel);
 			channel->sound = sound;
 			channel->id = channel_id;
 			channel->loop_count = sound->looping ? -1 : 0;
 			channel->is_playing = 1;
 			channel->gain = dB_to_volume(volumedB);
-			zout("Channel Added");
-			zfout(channel->gain);
 			SDL_UnlockAudioDevice(audio->id);
 			return;
 		}
