@@ -114,77 +114,76 @@ CREDITS
 // stretchy buffer
 // TODO: rename this suckers
 // TODO: Also, do we want short names or something?
-//
-typedef struct BufHdr {
+typedef struct zends_buf_hdr_t {
     size_t len;
     size_t cap;
     char buf[];
-} BufHdr;
+} zends_buf_hdr_t;
 
-#define buf__hdr(b) ((BufHdr *)((char *)(b) - offsetof(BufHdr, buf)))
+#define zends__buf_hdr(b) ((zends_buf_hdr_t *)((char *)(b) - offsetof(zends_buf_hdr_t, buf)))
 
-#define buf_len(b) ((b) ? buf__hdr(b)->len : 0)
-#define buf_cap(b) ((b) ? buf__hdr(b)->cap : 0)
-#define buf_end(b) ((b) + buf_len(b))
-#define buf_sizeof(b) ((b) ? buf_len(b)*sizeof(*b) : 0)
+#define zends_buf_len(b) ((b) ? zends__buf_hdr(b)->len : 0)
+#define zends_buf_cap(b) ((b) ? zends__buf_hdr(b)->cap : 0)
+#define zends_buf_end(b) ((b) + zends_buf_len(b))
+#define zends_buf_sizeof(b) ((b) ? zends_buf_len(b)*sizeof(*b) : 0)
 
-#define buf_free(b) ((b) ? (free(buf__hdr(b)), (b) = NULL) : 0)
-#define buf_fit(b, n) ((n) <= buf_cap(b) ? 0 : ((b) = buf__grow((b), (n), sizeof(*(b)))))
-#define buf_push(b, ...) (buf_fit((b), 1 + buf_len(b)), (b)[buf__hdr(b)->len++] = (__VA_ARGS__))
-#define buf_printf(b, ...) ((b) = buf__printf((b), __VA_ARGS__))
-#define buf_clear(b) ((b) ? buf__hdr(b)->len = 0 : 0)
+#define zends_buf_free(b) ((b) ? (free(zends__buf_hdr(b)), (b) = NULL) : 0)
+#define zends_buf_fit(b, n) ((n) <= zends_buf_cap(b) ? 0 : ((b) = zends__buf_grow((b), (n), sizeof(*(b)))))
+#define zends_buf_push(b, ...) (zends_buf_fit((b), 1 + zends_buf_len(b)), (b)[zends__buf_hdr(b)->len++] = (__VA_ARGS__))
+#define zends_buf_printf(b, ...) ((b) = zends__buf_printf((b), __VA_ARGS__))
+#define zends_buf_clear(b) ((b) ? zends__buf_hdr(b)->len = 0 : 0)
 
-void *buf__grow(const void *buf, size_t new_len, size_t elem_size);
-char *buf__printf(char *buf, const char *fmt, ...);
+void *zends__buf_grow(const void *buf, size_t new_len, size_t elem_size);
+char *zends__buf_printf(char *buf, const char *fmt, ...);
 
 
 // Maybe we don't even use the allocator here.
-// // Arena allocator
+// // zends_arena_t allocator
 // //
-// #define ARENA_ALIGNMENT 8
-// #define ARENA_BLOCK_SIZE (1024 * 1024)
-// // #define ARENA_BLOCK_SIZE 1024
+// #define ZENDS_ARENA_ALIGNMENT 8
+// #define ZENDS_ARENA_BLOCK_SIZE (1024 * 1024)
+// // #define ZENDS_ARENA_BLOCK_SIZE 1024
 // // TODO: Rename the structs and functions
 // // zends_arena_grow
 // // zends_arena_t for the structs.  Something like that.
-typedef struct Arena {
+typedef struct zends_arena_t {
     char *ptr;
     char *end;
     char **blocks;
-} Arena;
+} zends_arena_t;
 
-void *arena_alloc(Arena *arena, size_t size);
+void *zends_arena_alloc(zends_arena_t *arena, size_t size);
 
 //Hash functions
 
-uint64_t hash_uint64(uint64_t x);
-uint64_t hash_ptr(const void *ptr);
-uint64_t hash_mix(uint64_t x, uint64_t y);
-uint64_t hash_bytes(const void *ptr, size_t len);
+uint64_t zends_hash_uint64(uint64_t x);
+uint64_t zends_hash_ptr(const void *ptr);
+uint64_t zends_hash_mix(uint64_t x, uint64_t y);
+uint64_t zends_hash_bytes(const void *ptr, size_t len);
 
-// Hash Map
+// Hash zends_zends_map_t
 // TODO: not sure if all the functions are actually part
 // of the public api?
 
 // TODO: Rename the structs and functions
-typedef struct Map {
+typedef struct zends_zends_map_t {
     uint64_t *keys;
     uint64_t *vals;
     size_t len;
     size_t cap;
-} Map;
+} zends_zends_map_t;
 
-void *map_get(Map *map, const void *key);
-void map_put(Map *map, const void *key, void *val);
-uint64_t map_get_uint64(Map *map, void *key);
-void map_put_uint64(Map *map, void *key, uint64_t val);
-void *map_get_from_uint64(Map *map, uint64_t key);
-void map_put_from_uint64(Map *map, uint64_t key, void *val);
+void *zends_map_get(zends_zends_map_t *map, const void *key);
+void zends_map_put(zends_zends_map_t *map, const void *key, void *val);
+uint64_t zends_map_get_uint64(zends_zends_map_t *map, void *key);
+void zends_map_put_uint64(zends_zends_map_t *map, void *key, uint64_t val);
+void *zends_map_get_from_uint64(zends_zends_map_t *map, uint64_t key);
+void zends_map_put_from_uint64(zends_zends_map_t *map, uint64_t key, void *val);
 
 // String interning
 // TODO: Rename the structs and functions
-const char *str_intern(const char *str);
-const char *str_intern_range(const char *start, const char *end);
+const char *zends_str_intern(const char *str);
+const char *zends_str_intern_range(const char *start, const char *end);
 
 #endif
 
@@ -211,15 +210,15 @@ const char *str_intern_range(const char *start, const char *end);
 #define ZENDS_ALIGN_UP_PTR(p, a) ((void *)ZENDS_ALIGN_UP((uintptr_t)(p), (a)))
 
 
-void *buf__grow(const void *buf, size_t new_len, size_t elem_size) {
-    assert(buf_cap(buf) <= (SIZE_MAX - 1)/2);
-    size_t new_cap = ZENDS_CLAMP_MIN(2*buf_cap(buf), ZENDS_MAX(new_len, 16));
+void *zends__buf_grow(const void *buf, size_t new_len, size_t elem_size) {
+    assert(zends_buf_cap(buf) <= (SIZE_MAX - 1)/2);
+    size_t new_cap = ZENDS_CLAMP_MIN(2*zends_buf_cap(buf), ZENDS_MAX(new_len, 16));
     assert(new_len <= new_cap);
-    assert(new_cap <= (SIZE_MAX - offsetof(BufHdr, buf))/elem_size);
-    size_t new_size = offsetof(BufHdr, buf) + new_cap*elem_size;
-    BufHdr *new_hdr;
+    assert(new_cap <= (SIZE_MAX - offsetof(zends_buf_hdr_t, buf))/elem_size);
+    size_t new_size = offsetof(zends_buf_hdr_t, buf) + new_cap*elem_size;
+    zends_buf_hdr_t *new_hdr;
     if (buf) {
-        new_hdr = ZENDS_REALLOC(buf__hdr(buf), new_size);
+        new_hdr = ZENDS_REALLOC(zends__buf_hdr(buf), new_size);
     } else {
         new_hdr = ZENDS_MALLOC(new_size);
         new_hdr->len = 0;
@@ -228,80 +227,80 @@ void *buf__grow(const void *buf, size_t new_len, size_t elem_size) {
     return new_hdr->buf;
 }
 
-char *buf__printf(char *buf, const char *fmt, ...) {
+char *zends__buf_printf(char *buf, const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
-    size_t cap = buf_cap(buf) - buf_len(buf);
-    size_t n = 1 + vsnprintf(buf_end(buf), cap, fmt, args);
+    size_t cap = zends_buf_cap(buf) - zends_buf_len(buf);
+    size_t n = 1 + vsnprintf(zends_buf_end(buf), cap, fmt, args);
     va_end(args);
     if (n > cap) {
-        buf_fit(buf, n + buf_len(buf));
+        zends_buf_fit(buf, n + zends_buf_len(buf));
         va_start(args, fmt);
-        size_t new_cap = buf_cap(buf) - buf_len(buf);
-        n = 1 + vsnprintf(buf_end(buf), new_cap, fmt, args);
+        size_t new_cap = zends_buf_cap(buf) - zends_buf_len(buf);
+        n = 1 + vsnprintf(zends_buf_end(buf), new_cap, fmt, args);
         assert(n <= new_cap);
         va_end(args);
     }
-    buf__hdr(buf)->len += n - 1;
+    zends__buf_hdr(buf)->len += n - 1;
     return buf;
 }
 
-// Arena allocator
-#define ARENA_ALIGNMENT 8
-#define ARENA_BLOCK_SIZE (1024 * 1024)
-// #define ARENA_BLOCK_SIZE 1024
+// zends_arena_t allocator
+#define ZENDS_ARENA_ALIGNMENT 8
+#define ZENDS_ARENA_BLOCK_SIZE (1024 * 1024)
+// #define ZENDS_ARENA_BLOCK_SIZE 1024
 // TODO: Rename the structs and functions
 // zends_arena_grow
 // zends_arena_t for the structs.  Something like that.
 
-void arena_grow(Arena *arena, size_t min_size) {
-    size_t size = ZENDS_ALIGN_UP(ZENDS_CLAMP_MIN(min_size, ARENA_BLOCK_SIZE), ARENA_ALIGNMENT);
+void arena_grow(zends_arena_t *arena, size_t min_size) {
+    size_t size = ZENDS_ALIGN_UP(ZENDS_CLAMP_MIN(min_size, ZENDS_ARENA_BLOCK_SIZE), ZENDS_ARENA_ALIGNMENT);
     arena->ptr = ZENDS_MALLOC(size);
-    assert(arena->ptr == ZENDS_ALIGN_DOWN_PTR(arena->ptr, ARENA_ALIGNMENT));
+    assert(arena->ptr == ZENDS_ALIGN_DOWN_PTR(arena->ptr, ZENDS_ARENA_ALIGNMENT));
     arena->end = arena->ptr + size;
-    buf_push(arena->blocks, arena->ptr);
+    zends_buf_push(arena->blocks, arena->ptr);
 }
 
-void *arena_alloc(Arena *arena, size_t size) {
+void *zends_arena_alloc(zends_arena_t *arena, size_t size) {
     if (size > (size_t)(arena->end - arena->ptr)) {
         arena_grow(arena, size);
         assert(size <= (size_t)(arena->end - arena->ptr));
     }
     void *ptr = arena->ptr;
-    arena->ptr = ZENDS_ALIGN_UP_PTR(arena->ptr + size, ARENA_ALIGNMENT);
+    arena->ptr = ZENDS_ALIGN_UP_PTR(arena->ptr + size, ZENDS_ARENA_ALIGNMENT);
     assert(arena->ptr <= arena->end);
-    assert(ptr == ZENDS_ALIGN_DOWN_PTR(ptr, ARENA_ALIGNMENT));
+    assert(ptr == ZENDS_ALIGN_DOWN_PTR(ptr, ZENDS_ARENA_ALIGNMENT));
     return ptr;
 }
 
-void arena_free(Arena *arena) {
-    for (char **it = arena->blocks; it != buf_end(arena->blocks); it++) {
+void arena_free(zends_arena_t *arena) {
+    for (char **it = arena->blocks; it != zends_buf_end(arena->blocks); it++) {
         free(*it);
     }
-    buf_free(arena->blocks);
+    zends_buf_free(arena->blocks);
 }
 
 
 // Hash functions
 
-uint64_t hash_uint64(uint64_t x) {
+uint64_t zends_hash_uint64(uint64_t x) {
     x *= 0xff51afd7ed558ccd;
     x ^= x >> 32;
     return x;
 }
 
-uint64_t hash_ptr(const void *ptr) {
-    return hash_uint64((uintptr_t)ptr);
+uint64_t zends_hash_ptr(const void *ptr) {
+    return zends_hash_uint64((uintptr_t)ptr);
 }
 
-uint64_t hash_mix(uint64_t x, uint64_t y) {
+uint64_t zends_hash_mix(uint64_t x, uint64_t y) {
     x ^= y;
     x *= 0xff51afd7ed558ccd;
     x ^= x >> 32;
     return x;
 }
 
-uint64_t hash_bytes(const void *ptr, size_t len) {
+uint64_t zends_hash_bytes(const void *ptr, size_t len) {
     uint64_t x = 0xcbf29ce484222325;
     const char *buf = (const char *)ptr;
     for (size_t i = 0; i < len; i++) {
@@ -312,15 +311,15 @@ uint64_t hash_bytes(const void *ptr, size_t len) {
     return x;
 }
 
-// Hash Map
+// Hash zends_zends_map_t
 
-void map_put_uint64_from_uint64(Map *map, uint64_t key, uint64_t val);
-uint64_t map_get_uint64_from_uint64(Map *map, uint64_t key) {
+void zends_map_put_uint64_from_uint64(zends_zends_map_t *map, uint64_t key, uint64_t val);
+uint64_t zends_map_get_uint64_from_uint64(zends_zends_map_t *map, uint64_t key) {
     if (map->len == 0) {
         return 0;
     }
     assert(ZENDS_IS_POW2(map->cap));
-    size_t i = (size_t)hash_uint64(key);
+    size_t i = (size_t)zends_hash_uint64(key);
     assert(map->len < map->cap);
     for (;;) {
         i &= map->cap - 1;
@@ -334,16 +333,16 @@ uint64_t map_get_uint64_from_uint64(Map *map, uint64_t key) {
     return 0;
 }
 
-void map_grow(Map *map, size_t new_cap) {
+void zends_map_grow(zends_zends_map_t *map, size_t new_cap) {
     new_cap = ZENDS_CLAMP_MIN(new_cap, 16);
-    Map new_map = {
+    zends_zends_map_t new_map = {
         .keys = ZENDS_CALLOC(new_cap, sizeof(uint64_t)),
         .vals = ZENDS_MALLOC(new_cap * sizeof(uint64_t)),
         .cap = new_cap,
     };
     for (size_t i = 0; i < map->cap; i++) {
         if (map->keys[i]) {
-            map_put_uint64_from_uint64(&new_map, map->keys[i], map->vals[i]);
+            zends_map_put_uint64_from_uint64(&new_map, map->keys[i], map->vals[i]);
         }
     }
     ZENDS_FREE((void *)map->keys);
@@ -351,17 +350,17 @@ void map_grow(Map *map, size_t new_cap) {
     *map = new_map;
 }
 
-void map_put_uint64_from_uint64(Map *map, uint64_t key, uint64_t val) {
+void zends_map_put_uint64_from_uint64(zends_zends_map_t *map, uint64_t key, uint64_t val) {
     assert(key);
     if (!val) {
         return;
     }
     if (2*map->len >= map->cap) {
-        map_grow(map, 2*map->cap);
+        zends_map_grow(map, 2*map->cap);
     }
     assert(2*map->len < map->cap);
     assert(ZENDS_IS_POW2(map->cap));
-    size_t i = (size_t)hash_uint64(key);
+    size_t i = (size_t)zends_hash_uint64(key);
     for (;;) {
         i &= map->cap - 1;
         if (!map->keys[i]) {
@@ -377,28 +376,28 @@ void map_put_uint64_from_uint64(Map *map, uint64_t key, uint64_t val) {
     }
 }
 
-void *map_get(Map *map, const void *key) {
-    return (void *)(uintptr_t)map_get_uint64_from_uint64(map, (uint64_t)(uintptr_t)key);
+void *zends_map_get(zends_zends_map_t *map, const void *key) {
+    return (void *)(uintptr_t)zends_map_get_uint64_from_uint64(map, (uint64_t)(uintptr_t)key);
 }
 
-void map_put(Map *map, const void *key, void *val) {
-    map_put_uint64_from_uint64(map, (uint64_t)(uintptr_t)key, (uint64_t)(uintptr_t)val);
+void zends_map_put(zends_zends_map_t *map, const void *key, void *val) {
+    zends_map_put_uint64_from_uint64(map, (uint64_t)(uintptr_t)key, (uint64_t)(uintptr_t)val);
 }
 
-void *map_get_from_uint64(Map *map, uint64_t key) {
-    return (void *)(uintptr_t)map_get_uint64_from_uint64(map, key);
+void *zends_map_get_from_uint64(zends_zends_map_t *map, uint64_t key) {
+    return (void *)(uintptr_t)zends_map_get_uint64_from_uint64(map, key);
 }
 
-void map_put_from_uint64(Map *map, uint64_t key, void *val) {
-    map_put_uint64_from_uint64(map, key, (uint64_t)(uintptr_t)val);
+void zends_map_put_from_uint64(zends_zends_map_t *map, uint64_t key, void *val) {
+    zends_map_put_uint64_from_uint64(map, key, (uint64_t)(uintptr_t)val);
 }
 
-uint64_t map_get_uint64(Map *map, void *key) {
-    return map_get_uint64_from_uint64(map, (uint64_t)(uintptr_t)key);
+uint64_t zends_map_get_uint64(zends_zends_map_t *map, void *key) {
+    return zends_map_get_uint64_from_uint64(map, (uint64_t)(uintptr_t)key);
 }
 
-void map_put_uint64(Map *map, void *key, uint64_t val) {
-    map_put_uint64_from_uint64(map, (uint64_t)(uintptr_t)key, val);
+void zends_map_put_uint64(zends_zends_map_t *map, void *key, uint64_t val) {
+    zends_map_put_uint64_from_uint64(map, (uint64_t)(uintptr_t)key, val);
 }
 
 // String interning
@@ -409,32 +408,32 @@ typedef struct Intern {
     char str[];
 } Intern;
 
-Arena intern_arena;
-Map interns;
+zends_arena_t intern_arena;
+zends_zends_map_t interns;
 size_t intern_memory_usage;
 
-const char *str_intern_range(const char *start, const char *end) {
+const char *zends_str_intern_range(const char *start, const char *end) {
     size_t len = end - start;
-    uint64_t hash = hash_bytes(start, len);
+    uint64_t hash = zends_hash_bytes(start, len);
     uint64_t key = hash ? hash : 1;
-    Intern *intern = map_get_from_uint64(&interns, key);
+    Intern *intern = zends_map_get_from_uint64(&interns, key);
     for (Intern *it = intern; it; it = it->next) {
         if (it->len == len && strncmp(it->str, start, len) == 0) {
             return it->str;
         }
     }
-    Intern *new_intern = arena_alloc(&intern_arena, offsetof(Intern, str) + len + 1);
+    Intern *new_intern = zends_arena_alloc(&intern_arena, offsetof(Intern, str) + len + 1);
     new_intern->len = len;
     new_intern->next = intern;
     memcpy(new_intern->str, start, len);
     new_intern->str[len] = 0;
-    map_put_from_uint64(&interns, key, new_intern);
+    zends_map_put_from_uint64(&interns, key, new_intern);
     intern_memory_usage += sizeof(Intern) + len + 1 + 16; /* 16 is estimate of hash table cost */
     return new_intern->str;
 }
 
-const char *str_intern(const char *str) {
-    return str_intern_range(str, str + strlen(str));
+const char *zends_str_intern(const char *str) {
+    return zends_str_intern_range(str, str + strlen(str));
 }
 
 
