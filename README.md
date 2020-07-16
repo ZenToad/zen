@@ -5,7 +5,7 @@ Single header file libraries for C/C++.
 
 Library | Description
 ------------ | -------------
-zen_box2d.h| Debug rendering for Box2D
+zen_ds.h| Data Structures
 
 # Old libraries
 
