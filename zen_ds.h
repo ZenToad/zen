@@ -273,7 +273,7 @@ void *zends_arena_alloc(zends_arena_t *arena, size_t size) {
     return ptr;
 }
 
-void arena_free(zends_arena_t *arena) {
+void zends__arena_free(zends_arena_t *arena) {
     for (char **it = arena->blocks; it != zends_buf_end(arena->blocks); it++) {
         free(*it);
     }
@@ -402,33 +402,33 @@ void zends_map_put_uint64(zends_map_t *map, void *key, uint64_t val) {
 
 // String interning
 
-typedef struct Intern {
+typedef struct zends__intern_t {
     size_t len;
-    struct Intern *next;
+    struct zends__intern_t *next;
     char str[];
-} Intern;
+} zends__intern_t;
 
-zends_arena_t intern_arena;
-zends_map_t interns;
-size_t intern_memory_usage;
+zends_arena_t zends__intern_arena;
+zends_map_t zends__interns;
+size_t zends__intern_memory_usage;
 
 const char *zends_str_intern_range(const char *start, const char *end) {
     size_t len = end - start;
     uint64_t hash = zends_hash_bytes(start, len);
     uint64_t key = hash ? hash : 1;
-    Intern *intern = zends_map_get_from_uint64(&interns, key);
-    for (Intern *it = intern; it; it = it->next) {
+    zends__intern_t *zends__intern_t = zends_map_get_from_uint64(&zends__interns, key);
+    for (zends__intern_t *it = zends__intern_t; it; it = it->next) {
         if (it->len == len && strncmp(it->str, start, len) == 0) {
             return it->str;
         }
     }
-    Intern *new_intern = zends_arena_alloc(&intern_arena, offsetof(Intern, str) + len + 1);
+    zends__intern_t *new_intern = zends_arena_alloc(&zends__intern_arena, offsetof(zends__intern_t, str) + len + 1);
     new_intern->len = len;
-    new_intern->next = intern;
+    new_intern->next = zends__intern_t;
     memcpy(new_intern->str, start, len);
     new_intern->str[len] = 0;
-    zends_map_put_from_uint64(&interns, key, new_intern);
-    intern_memory_usage += sizeof(Intern) + len + 1 + 16; /* 16 is estimate of hash table cost */
+    zends_map_put_from_uint64(&zends__interns, key, new_intern);
+    zends__intern_memory_usage += sizeof(zends__intern_t) + len + 1 + 16; /* 16 is estimate of hash table cost */
     return new_intern->str;
 }
 
