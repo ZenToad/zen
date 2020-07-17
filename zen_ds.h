@@ -1,13 +1,6 @@
 /* zen_ds.h - v0.0 - public domain data structures - Tim Wright 2020
 
     TODO:
-    Need to redo all the zen libraries.
-    - move over everything currently in there to an archive branch
-    - then we can start again, and we start with just this fucking thing.
-        zen_ds.h
-      Because this is literaly the thing I always need for my project.
-      I'm sure there are lots more.
-    
 
    This is a single-header-file library that provides easy-to-use
    dynamic arrays and hash tables for C 
@@ -93,9 +86,7 @@ CREDITS
 
 #include <stdint.h>
 #include <stdbool.h>
-// #include <stddef.h>
 
-// TODO: This check is kindof silly right?
 #if defined(ZENDS_MALLOC)  && !(defined(ZENDS_CALLOC) && defined(ZENDS_REALLOC) && defined(ZENDS_FREE)) || \
     defined(ZENDS_CALLOC)  && !(defined(ZENDS_MALLOC) && defined(ZENDS_REALLOC) && defined(ZENDS_FREE)) || \
     defined(ZENDS_REALLOC) && !(defined(ZENDS_MALLOC) && defined(ZENDS_CALLOC)  && defined(ZENDS_FREE)) || \
@@ -112,8 +103,7 @@ CREDITS
 
 
 // stretchy buffer
-// TODO: rename this suckers
-// TODO: Also, do we want short names or something?
+
 typedef struct zends_buf_hdr_t {
     size_t len;
     size_t cap;
@@ -137,15 +127,8 @@ void *zends__buf_grow(const void *buf, size_t new_len, size_t elem_size);
 char *zends__buf_printf(char *buf, const char *fmt, ...);
 
 
-// Maybe we don't even use the allocator here.
-// // zends_arena_t allocator
-// //
-// #define ZENDS_ARENA_ALIGNMENT 8
-// #define ZENDS_ARENA_BLOCK_SIZE (1024 * 1024)
-// // #define ZENDS_ARENA_BLOCK_SIZE 1024
-// // TODO: Rename the structs and functions
-// // zends_arena_grow
-// // zends_arena_t for the structs.  Something like that.
+// arena allocator
+
 typedef struct zends_arena_t {
     char *ptr;
     char *end;
@@ -154,18 +137,17 @@ typedef struct zends_arena_t {
 
 void *zends_arena_alloc(zends_arena_t *arena, size_t size);
 
-//Hash functions
+
+// hash functions
 
 uint64_t zends_hash_uint64(uint64_t x);
 uint64_t zends_hash_ptr(const void *ptr);
 uint64_t zends_hash_mix(uint64_t x, uint64_t y);
 uint64_t zends_hash_bytes(const void *ptr, size_t len);
 
-// Hash zends_map_t
-// TODO: not sure if all the functions are actually part
-// of the public api?
 
-// TODO: Rename the structs and functions
+// hash map
+
 typedef struct zends_map_t {
     uint64_t *keys;
     uint64_t *vals;
@@ -181,11 +163,13 @@ void *zends_map_get_from_uint64(zends_map_t *map, uint64_t key);
 void zends_map_put_from_uint64(zends_map_t *map, uint64_t key, void *val);
 
 // String interning
-// TODO: Rename the structs and functions
+
 const char *zends_str_intern(const char *str);
 const char *zends_str_intern_range(const char *start, const char *end);
+void zends_str_free(void);
 
 #endif
+
 
 // ------------------------------------------
 // Implementation
@@ -209,6 +193,8 @@ const char *zends_str_intern_range(const char *start, const char *end);
 #define ZENDS_ALIGN_DOWN_PTR(p, a) ((void *)ZENDS_ALIGN_DOWN((uintptr_t)(p), (a)))
 #define ZENDS_ALIGN_UP_PTR(p, a) ((void *)ZENDS_ALIGN_UP((uintptr_t)(p), (a)))
 
+
+// stretchy buffer
 
 void *zends__buf_grow(const void *buf, size_t new_len, size_t elem_size) {
     assert(zends_buf_cap(buf) <= (SIZE_MAX - 1)/2);
@@ -245,15 +231,13 @@ char *zends__buf_printf(char *buf, const char *fmt, ...) {
     return buf;
 }
 
-// zends_arena_t allocator
+
+// arena allocator
+
 #define ZENDS_ARENA_ALIGNMENT 8
 #define ZENDS_ARENA_BLOCK_SIZE (1024 * 1024)
-// #define ZENDS_ARENA_BLOCK_SIZE 1024
-// TODO: Rename the structs and functions
-// zends_arena_grow
-// zends_arena_t for the structs.  Something like that.
 
-void arena_grow(zends_arena_t *arena, size_t min_size) {
+void zends__arena_grow(zends_arena_t *arena, size_t min_size) {
     size_t size = ZENDS_ALIGN_UP(ZENDS_CLAMP_MIN(min_size, ZENDS_ARENA_BLOCK_SIZE), ZENDS_ARENA_ALIGNMENT);
     arena->ptr = ZENDS_MALLOC(size);
     assert(arena->ptr == ZENDS_ALIGN_DOWN_PTR(arena->ptr, ZENDS_ARENA_ALIGNMENT));
@@ -263,7 +247,7 @@ void arena_grow(zends_arena_t *arena, size_t min_size) {
 
 void *zends_arena_alloc(zends_arena_t *arena, size_t size) {
     if (size > (size_t)(arena->end - arena->ptr)) {
-        arena_grow(arena, size);
+        zends__arena_grow(arena, size);
         assert(size <= (size_t)(arena->end - arena->ptr));
     }
     void *ptr = arena->ptr;
@@ -281,7 +265,7 @@ void zends__arena_free(zends_arena_t *arena) {
 }
 
 
-// Hash functions
+// hash functions
 
 uint64_t zends_hash_uint64(uint64_t x) {
     x *= 0xff51afd7ed558ccd;
@@ -311,7 +295,7 @@ uint64_t zends_hash_bytes(const void *ptr, size_t len) {
     return x;
 }
 
-// Hash zends_map_t
+// hash map
 
 void zends_map_put_uint64_from_uint64(zends_map_t *map, uint64_t key, uint64_t val);
 uint64_t zends_map_get_uint64_from_uint64(zends_map_t *map, uint64_t key) {
@@ -416,15 +400,15 @@ const char *zends_str_intern_range(const char *start, const char *end) {
     size_t len = end - start;
     uint64_t hash = zends_hash_bytes(start, len);
     uint64_t key = hash ? hash : 1;
-    zends__intern_t *zends__intern_t = zends_map_get_from_uint64(&zends__interns, key);
-    for (zends__intern_t *it = zends__intern_t; it; it = it->next) {
+    zends__intern_t *intern = zends_map_get_from_uint64(&zends__interns, key);
+    for (zends__intern_t *it = intern; it; it = it->next) {
         if (it->len == len && strncmp(it->str, start, len) == 0) {
             return it->str;
         }
     }
     zends__intern_t *new_intern = zends_arena_alloc(&zends__intern_arena, offsetof(zends__intern_t, str) + len + 1);
     new_intern->len = len;
-    new_intern->next = zends__intern_t;
+    new_intern->next = intern;
     memcpy(new_intern->str, start, len);
     new_intern->str[len] = 0;
     zends_map_put_from_uint64(&zends__interns, key, new_intern);
@@ -434,6 +418,10 @@ const char *zends_str_intern_range(const char *start, const char *end) {
 
 const char *zends_str_intern(const char *str) {
     return zends_str_intern_range(str, str + strlen(str));
+}
+
+void zends_str_free(void) {
+    zends__arena_free(&zends__intern_arena);
 }
 
 
