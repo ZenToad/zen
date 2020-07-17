@@ -161,24 +161,24 @@ uint64_t zends_hash_ptr(const void *ptr);
 uint64_t zends_hash_mix(uint64_t x, uint64_t y);
 uint64_t zends_hash_bytes(const void *ptr, size_t len);
 
-// Hash zends_zends_map_t
+// Hash zends_map_t
 // TODO: not sure if all the functions are actually part
 // of the public api?
 
 // TODO: Rename the structs and functions
-typedef struct zends_zends_map_t {
+typedef struct zends_map_t {
     uint64_t *keys;
     uint64_t *vals;
     size_t len;
     size_t cap;
-} zends_zends_map_t;
+} zends_map_t;
 
-void *zends_map_get(zends_zends_map_t *map, const void *key);
-void zends_map_put(zends_zends_map_t *map, const void *key, void *val);
-uint64_t zends_map_get_uint64(zends_zends_map_t *map, void *key);
-void zends_map_put_uint64(zends_zends_map_t *map, void *key, uint64_t val);
-void *zends_map_get_from_uint64(zends_zends_map_t *map, uint64_t key);
-void zends_map_put_from_uint64(zends_zends_map_t *map, uint64_t key, void *val);
+void *zends_map_get(zends_map_t *map, const void *key);
+void zends_map_put(zends_map_t *map, const void *key, void *val);
+uint64_t zends_map_get_uint64(zends_map_t *map, void *key);
+void zends_map_put_uint64(zends_map_t *map, void *key, uint64_t val);
+void *zends_map_get_from_uint64(zends_map_t *map, uint64_t key);
+void zends_map_put_from_uint64(zends_map_t *map, uint64_t key, void *val);
 
 // String interning
 // TODO: Rename the structs and functions
@@ -311,10 +311,10 @@ uint64_t zends_hash_bytes(const void *ptr, size_t len) {
     return x;
 }
 
-// Hash zends_zends_map_t
+// Hash zends_map_t
 
-void zends_map_put_uint64_from_uint64(zends_zends_map_t *map, uint64_t key, uint64_t val);
-uint64_t zends_map_get_uint64_from_uint64(zends_zends_map_t *map, uint64_t key) {
+void zends_map_put_uint64_from_uint64(zends_map_t *map, uint64_t key, uint64_t val);
+uint64_t zends_map_get_uint64_from_uint64(zends_map_t *map, uint64_t key) {
     if (map->len == 0) {
         return 0;
     }
@@ -333,9 +333,9 @@ uint64_t zends_map_get_uint64_from_uint64(zends_zends_map_t *map, uint64_t key) 
     return 0;
 }
 
-void zends_map_grow(zends_zends_map_t *map, size_t new_cap) {
+void zends_map_grow(zends_map_t *map, size_t new_cap) {
     new_cap = ZENDS_CLAMP_MIN(new_cap, 16);
-    zends_zends_map_t new_map = {
+    zends_map_t new_map = {
         .keys = ZENDS_CALLOC(new_cap, sizeof(uint64_t)),
         .vals = ZENDS_MALLOC(new_cap * sizeof(uint64_t)),
         .cap = new_cap,
@@ -350,7 +350,7 @@ void zends_map_grow(zends_zends_map_t *map, size_t new_cap) {
     *map = new_map;
 }
 
-void zends_map_put_uint64_from_uint64(zends_zends_map_t *map, uint64_t key, uint64_t val) {
+void zends_map_put_uint64_from_uint64(zends_map_t *map, uint64_t key, uint64_t val) {
     assert(key);
     if (!val) {
         return;
@@ -376,27 +376,27 @@ void zends_map_put_uint64_from_uint64(zends_zends_map_t *map, uint64_t key, uint
     }
 }
 
-void *zends_map_get(zends_zends_map_t *map, const void *key) {
+void *zends_map_get(zends_map_t *map, const void *key) {
     return (void *)(uintptr_t)zends_map_get_uint64_from_uint64(map, (uint64_t)(uintptr_t)key);
 }
 
-void zends_map_put(zends_zends_map_t *map, const void *key, void *val) {
+void zends_map_put(zends_map_t *map, const void *key, void *val) {
     zends_map_put_uint64_from_uint64(map, (uint64_t)(uintptr_t)key, (uint64_t)(uintptr_t)val);
 }
 
-void *zends_map_get_from_uint64(zends_zends_map_t *map, uint64_t key) {
+void *zends_map_get_from_uint64(zends_map_t *map, uint64_t key) {
     return (void *)(uintptr_t)zends_map_get_uint64_from_uint64(map, key);
 }
 
-void zends_map_put_from_uint64(zends_zends_map_t *map, uint64_t key, void *val) {
+void zends_map_put_from_uint64(zends_map_t *map, uint64_t key, void *val) {
     zends_map_put_uint64_from_uint64(map, key, (uint64_t)(uintptr_t)val);
 }
 
-uint64_t zends_map_get_uint64(zends_zends_map_t *map, void *key) {
+uint64_t zends_map_get_uint64(zends_map_t *map, void *key) {
     return zends_map_get_uint64_from_uint64(map, (uint64_t)(uintptr_t)key);
 }
 
-void zends_map_put_uint64(zends_zends_map_t *map, void *key, uint64_t val) {
+void zends_map_put_uint64(zends_map_t *map, void *key, uint64_t val) {
     zends_map_put_uint64_from_uint64(map, (uint64_t)(uintptr_t)key, val);
 }
 
@@ -409,7 +409,7 @@ typedef struct Intern {
 } Intern;
 
 zends_arena_t intern_arena;
-zends_zends_map_t interns;
+zends_map_t interns;
 size_t intern_memory_usage;
 
 const char *zends_str_intern_range(const char *start, const char *end) {
