@@ -9,7 +9,7 @@ zen_ds.h| Data Structures
 
 # TODO
 
-* nothing released the string intern memory yet.  How should that work?
+* I could make the string intern thing an api interface thingy, with a create()/destroy() thing for the actual pointer.  
 
 # Old libraries
 
