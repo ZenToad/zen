@@ -1,0 +1,7 @@
+#ifndef INCLUDE_ZENDS_STATIC_ARRAY
+
+#endif
+
+#ifdef ZENDS_STATIC_ARRAY_IMPLEMENTATION
+
+#endif
